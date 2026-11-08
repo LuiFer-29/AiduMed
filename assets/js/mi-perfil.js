@@ -96,7 +96,7 @@
   // ---------- Plan ----------
   var precios = { 'Piloto fundador': '$29 al mes, por 6 meses', 'Básico': '$49 al mes', 'Profesional': '$99 al mes' };
   $('plan').innerHTML = p.plan && precios[p.plan]
-    ? '<strong>' + esc(p.plan) + '</strong><span>' + precios[p.plan] + '</span><span class="ayuda">No cobramos nada hasta aprobar su registro.</span>'
+    ? '<strong>' + esc(p.plan) + '</strong><span>' + precios[p.plan] + '</span>' + (p.estado === 'aprobado' || p.estado === 'activo' || p.estado === 'pausado' ? '' : '<span class="ayuda">No cobramos nada hasta aprobar su registro.</span>')
     : '<span class="ayuda">Aún no ha elegido un plan.</span>';
 
   $('cargando').hidden = true;

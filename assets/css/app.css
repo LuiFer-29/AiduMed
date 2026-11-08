@@ -156,3 +156,14 @@ figcaption .enlace-boton { padding: 0; font-size: 13px; }
 .plan-perfil strong { font-family: var(--titulos); font-size: 24px; font-weight: 800; color: var(--verde); }
 .caja-pronto { border-style: dashed; background: #FBFCFB; }
 .etiqueta-pronto { font-size: 12px; font-weight: 700; color: #7A4B00; background: #FFF4DE; padding: 4px 10px; border-radius: 999px; }
+#perfil { display: flex; flex-direction: column; gap: 20px; }
+#perfil[hidden] { display: none; }
+@media (max-width: 560px) {
+  .pagina-app { padding: 20px 14px 48px; }
+  .perfil-hero { padding: 22px 18px; }
+  .perfil-foto { width: 68px; height: 68px; }
+  .lista-servicios-perfil li { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; }
+  .srv-nombre { grid-column: 1 / -1; }
+  .srv-duracion { justify-self: start; }
+  .caja { padding: 20px 18px; }
+}
