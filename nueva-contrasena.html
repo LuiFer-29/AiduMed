@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nueva contraseña · Aidú Med</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0B6E5F">
+<link rel="icon" type="image/png" href="/assets/img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/styles.css?v=4">
+<link rel="stylesheet" href="/assets/css/app.css?v=4">
+<script src="/assets/vendor/supabase-2.119.0.js" defer></script>
+<script src="/assets/js/app.js?v=4" defer></script>
+<script src="/assets/js/nueva-contrasena.js?v=4" defer></script>
+</head>
+<body class="app">
+<main class="tarjeta-cuenta">
+  <a class="logo-centro" href="/" aria-label="Aidú Med, inicio"><img src="/assets/img/logo-aidu-med.png" alt="Aidú Med" width="600" height="138"></a>
+  <form id="form-clave" class="form-app" novalidate>
+    <h1>Cree una contraseña nueva</h1>
+    <p class="sub">Use al menos 8 caracteres.</p>
+    <label class="campo">Contraseña nueva
+      <span class="clave-caja"><input type="password" name="clave" id="clave" autocomplete="new-password" minlength="8" required><button type="button" class="ver-clave" data-ver="clave">Mostrar</button></span>
+    </label>
+    <div class="mensaje" id="msg" role="status" hidden></div>
+    <button type="submit" class="boton boton-primario boton-ancho" id="guardar">Guardar contraseña</button>
+  </form>
+</main>
+</body>
+</html>

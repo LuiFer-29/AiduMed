@@ -1,3 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /registro
+Disallow: /cuenta
+Disallow: /mi-perfil
+Disallow: /admin
+Disallow: /nueva-contrasena

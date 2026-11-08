@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Administración · Aidú Med</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0B6E5F">
+<link rel="icon" type="image/png" href="/assets/img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/styles.css?v=4">
+<link rel="stylesheet" href="/assets/css/app.css?v=4">
+<script src="/assets/vendor/supabase-2.119.0.js" defer></script>
+<script src="/assets/js/app.js?v=4" defer></script>
+<script src="/assets/js/admin.js?v=4" defer></script>
+</head>
+<body class="app">
+<header class="barra-app">
+  <div class="contenedor">
+    <a href="/" aria-label="Aidú Med, inicio"><img src="/assets/img/logo-aidu-med.png" alt="Aidú Med" width="600" height="138"></a>
+    <div class="acciones-barra"><span class="correo" id="correo-sesion"></span><button type="button" class="boton boton-secundario boton-chico" id="salir">Cerrar sesión</button></div>
+  </div>
+</header>
+<main class="admin" id="contenido">
+  <p class="cargando" id="cargando">Cargando…</p>
+  <div id="sin-permiso" class="caja" hidden><h2>No tiene acceso a esta página</h2><p>Esta sección es solo para el equipo de Aidú Med.</p></div>
+  <div id="panel" hidden style="display:flex;flex-direction:column;gap:20px">
+    <h1>Médicos registrados</h1>
+    <div class="filtros" role="group" aria-label="Filtrar por estado" id="filtros"></div>
+    <div class="tabla-caja">
+      <table class="tabla">
+        <thead><tr><th>Médico</th><th>Especialidad</th><th>Plan</th><th>WhatsApp</th><th>Enviado</th><th>Estado</th></tr></thead>
+        <tbody id="filas"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+<div class="detalle-fondo" id="detalle-fondo" hidden>
+  <aside class="detalle" role="dialog" aria-modal="true" aria-labelledby="det-nombre" id="detalle"></aside>
+</div>
+</body>
+</html>

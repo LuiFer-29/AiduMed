@@ -2,6 +2,26 @@
   publish = "."
 
 [[redirects]]
+  from = "/cuenta"
+  to = "/cuenta.html"
+  status = 200
+
+[[redirects]]
+  from = "/mi-perfil"
+  to = "/mi-perfil.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin"
+  to = "/admin.html"
+  status = 200
+
+[[redirects]]
+  from = "/nueva-contrasena"
+  to = "/nueva-contrasena.html"
+  status = 200
+
+[[redirects]]
   from = "/registro"
   to = "/registro.html"
   status = 200

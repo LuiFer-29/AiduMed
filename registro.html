@@ -12,9 +12,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/css/styles.css?v=3">
-<link rel="stylesheet" href="/assets/css/registro.css?v=3">
-<script src="/assets/js/registro.js?v=3" defer></script>
+<link rel="stylesheet" href="/assets/css/styles.css?v=4">
+<link rel="stylesheet" href="/assets/css/registro.css?v=4">
+<link rel="stylesheet" href="/assets/css/app.css?v=4">
+<script src="/assets/vendor/supabase-2.119.0.js" defer></script>
+<script src="/assets/js/app.js?v=4" defer></script>
+<script src="/assets/js/registro.js?v=4" defer></script>
 </head>
 <body class="registro">
 
@@ -30,19 +33,12 @@
     <div class="progreso" role="progressbar" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1" aria-label="Avance del registro"><div class="progreso-barra" id="progreso"></div></div>
   </header>
 
-  <form name="registro-medico" id="formulario" method="POST" action="/gracias" enctype="multipart/form-data" data-netlify="true" netlify-honeypot="bot-field" novalidate>
-    <input type="hidden" name="form-name" value="registro-medico">
-    <input type="hidden" name="plan" id="campo-plan" value="">
-    <input type="hidden" name="servicios" id="campo-servicios" value="">
-    <input type="hidden" name="dias_atencion" id="campo-dias" value="">
-    <input type="hidden" name="vacaciones" id="campo-vacaciones" value="">
-    <input type="hidden" name="ubicacion_gps" id="campo-gps" value="">
-    <p class="oculto"><label>No llenar: <input name="bot-field"></label></p>
-
-    <div class="registro-cuerpo">
+  <form id="formulario" novalidate>
+<div class="registro-cuerpo">
+      <p class="cargando" id="cargando">Cargando sus datos…</p>
 
       <!-- Paso 1 -->
-      <fieldset class="paso-form" data-paso="1"None aria-labelledby="titulo-paso-1">
+      <fieldset class="paso-form" data-paso="1" hidden aria-labelledby="titulo-paso-1">
         <h1 class="paso-titulo" id="titulo-paso-1">Sus datos profesionales</h1>
         <p class="paso-sub">Así le verán sus pacientes en Aidú Med.</p>
 
@@ -84,7 +80,7 @@
             <span class="subir-icono"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M15 8h2M15 12h2M7 16h10"/></svg></span>
             <span class="subir-texto"><strong id="carne-titulo">Foto de su carné de colegiado</strong><span id="carne-sub">Tómela con el celular, solo el frente</span></span>
           </label>
-          <input class="archivo" type="file" id="carne" name="foto_carne" accept="image/*" required>
+          <input class="archivo" type="file" id="carne" name="foto_carne" accept="image/*">
           <span class="error" data-error-for="foto_carne">Agregue la foto de su carné.</span>
           <p class="nota"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9c-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2l4-4"/></svg><span>Solo lo usamos para verificarlo. Su perfil mostrará el sello "Médico verificado".</span></p>
         </div>
@@ -217,13 +213,13 @@
       <!-- Final -->
       <section class="paso-form final" data-paso="5" hidden aria-live="polite">
         <div class="final-icono"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></div>
-        <h1>¡Listo! Ya recibimos sus datos</h1>
-        <p>Le escribiremos por WhatsApp en las próximas 24 horas para probar su asistente juntos antes de activarlo.</p>
-        <p>Cuando esté listo, recibirá su enlace propio y su código QR para compartirlo con sus pacientes.</p>
-        <a class="boton boton-secundario" href="/">Volver al inicio</a>
+        <h1 id="final-titulo">¡Listo! Ya recibimos sus datos</h1>
+        <p id="final-texto">Revisaremos su colegiación y le escribiremos por WhatsApp en las próximas 24 horas para probar su asistente juntos antes de activarlo.</p>
+        <p>Puede ver el estado de su registro y actualizar sus datos en su perfil.</p>
+        <a class="boton boton-primario" href="/mi-perfil">Ir a mi perfil</a>
       </section>
 
-      <div class="error-envio" id="error-envio" hidden>No pudimos enviar su registro. Revise su conexión e intente de nuevo.</div>
+      <div class="error-envio" id="error-envio" hidden>No pudimos guardar sus datos. Revise su conexión e intente de nuevo.</div>
     </div>
 
     <div class="registro-pie" id="pie">
@@ -231,5 +227,9 @@
     </div>
   </form>
 </div>
+<form name="aviso-registro" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input type="hidden" name="form-name" value="aviso-registro">
+  <input name="bot-field"><input name="tipo"><input name="nombre"><input name="especialidad"><input name="correo"><input name="plan"><input name="whatsapp">
+</form>
 </body>
 </html>

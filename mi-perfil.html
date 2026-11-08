@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mi perfil · Aidú Med</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0B6E5F">
+<link rel="icon" type="image/png" href="/assets/img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/styles.css?v=4">
+<link rel="stylesheet" href="/assets/css/app.css?v=4">
+<script src="/assets/vendor/supabase-2.119.0.js" defer></script>
+<script src="/assets/js/app.js?v=4" defer></script>
+<script src="/assets/js/mi-perfil.js?v=4" defer></script>
+</head>
+<body class="app">
+<header class="barra-app">
+  <div class="contenedor">
+    <a href="/" aria-label="Aidú Med, inicio"><img src="/assets/img/logo-aidu-med.png" alt="Aidú Med" width="600" height="138"></a>
+    <div class="acciones-barra"><span class="correo" id="correo-sesion"></span><button type="button" class="boton boton-secundario boton-chico" id="salir">Cerrar sesión</button></div>
+  </div>
+</header>
+<main class="pagina-app" id="contenido">
+  <p class="cargando" id="cargando">Cargando su perfil…</p>
+  <div id="perfil" hidden>
+    <h1 id="saludo">Mi perfil</h1>
+    <section class="caja caja-estado" aria-labelledby="estado-titulo">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <h2 id="estado-titulo">Estado de su registro</h2>
+        <span id="estado" class="estado"></span>
+        <p id="estado-texto"></p>
+      </div>
+      <a class="boton boton-primario" id="editar" href="/registro">Editar mis datos</a>
+    </section>
+    <div class="nota-admin" id="nota-admin" hidden></div>
+    <section class="caja"><h2>Datos profesionales</h2><dl class="datos" id="d-profesional"></dl></section>
+    <section class="caja"><h2>Consultorio</h2><dl class="datos" id="d-consultorio"></dl></section>
+    <section class="caja"><h2>Servicios y horarios</h2><dl class="datos" id="d-horarios"></dl></section>
+  </div>
+</main>
+</body>
+</html>

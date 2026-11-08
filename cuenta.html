@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Su cuenta · Aidú Med</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0B6E5F">
+<link rel="icon" type="image/png" href="/assets/img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/styles.css?v=4">
+<link rel="stylesheet" href="/assets/css/app.css?v=4">
+<script src="/assets/vendor/supabase-2.119.0.js" defer></script>
+<script src="/assets/js/app.js?v=4" defer></script>
+<script src="/assets/js/cuenta.js?v=4" defer></script>
+</head>
+<body class="app">
+<main class="tarjeta-cuenta">
+  <a class="logo-centro" href="/" aria-label="Aidú Med, inicio"><img src="/assets/img/logo-aidu-med.png" alt="Aidú Med" width="600" height="138"></a>
+
+  <!-- Entrar / crear cuenta -->
+  <section id="vista-acceso">
+    <div class="form-app">
+      <h1 id="titulo-acceso">Cree su cuenta</h1>
+      <p class="sub" id="sub-acceso">Con ella podrá registrar su consultorio y actualizar sus datos cuando quiera.</p>
+      <div class="pestanas" role="tablist" aria-label="Tipo de acceso">
+        <button type="button" role="tab" id="tab-crear" aria-selected="true">Crear cuenta</button>
+        <button type="button" role="tab" id="tab-entrar" aria-selected="false">Iniciar sesión</button>
+      </div>
+      <form id="form-acceso" class="form-app" novalidate>
+        <label class="campo">Correo electrónico
+          <input type="email" name="correo" autocomplete="email" inputmode="email" required>
+        </label>
+        <label class="campo">Contraseña
+          <span class="clave-caja"><input type="password" name="clave" id="clave" autocomplete="new-password" minlength="8" required><button type="button" class="ver-clave" data-ver="clave">Mostrar</button></span>
+          <span class="ayuda" id="ayuda-clave">Mínimo 8 caracteres.</span>
+        </label>
+        <div class="mensaje error" id="error-acceso" role="alert" hidden></div>
+        <button type="submit" class="boton boton-primario boton-ancho" id="boton-acceso">Crear cuenta</button>
+        <button type="button" class="enlace-boton" id="olvide" hidden>¿Olvidó su contraseña?</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Revisar correo -->
+  <section id="vista-revisar" class="form-app" hidden>
+    <h1>Revise su correo</h1>
+    <p class="sub">Le enviamos un enlace a <strong id="correo-enviado"></strong>. Ábralo para confirmar su cuenta y continuar con el registro.</p>
+    <div class="mensaje ok">Si no lo ve en unos minutos, revise la carpeta de spam o promociones.</div>
+    <button type="button" class="enlace-boton" id="volver-acceso">Usar otro correo</button>
+  </section>
+
+  <!-- Recuperar contraseña -->
+  <section id="vista-recuperar" class="form-app" hidden>
+    <h1>Recuperar contraseña</h1>
+    <p class="sub">Escriba su correo y le enviaremos un enlace para crear una contraseña nueva.</p>
+    <form id="form-recuperar" class="form-app" novalidate>
+      <label class="campo">Correo electrónico
+        <input type="email" name="correo" autocomplete="email" inputmode="email" required>
+      </label>
+      <div class="mensaje" id="msg-recuperar" role="status" hidden></div>
+      <button type="submit" class="boton boton-primario boton-ancho">Enviar enlace</button>
+      <button type="button" class="enlace-boton" id="volver-acceso-2">Volver a iniciar sesión</button>
+    </form>
+  </section>
+
+  <p class="pie-cuenta">Al crear su cuenta acepta los <a href="/terminos">términos y condiciones</a> y el <a href="/privacidad">aviso de privacidad</a>.</p>
+</main>
+</body>
+</html>
