@@ -62,6 +62,8 @@ window.AIDU_SB = {
       if (/User already registered/i.test(m)) return 'Ya existe una cuenta con este correo. Inicie sesión.';
       if (/Password should be at least/i.test(m)) return 'La contraseña debe tener al menos 8 caracteres.';
       if (/rate limit|too many/i.test(m)) return 'Demasiados intentos. Espere unos minutos e intente de nuevo.';
+      if (/mime type|invalid_mime/i.test(m)) return 'Ese formato de imagen no es compatible. Use una foto JPG o PNG.';
+      if (/exceeded the maximum|too large|Payload/i.test(m)) return 'La imagen es muy pesada (máximo 6 MB). Use una foto más liviana.';
       if (/network|fetch/i.test(m)) return 'No hay conexión. Revise su internet e intente de nuevo.';
       return 'Ocurrió un error. Intente de nuevo o escríbanos a info@aidu.pro.';
     },

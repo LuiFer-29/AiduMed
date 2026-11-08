@@ -1,0 +1,25 @@
+<div style="margin:0;padding:24px 12px;background:#F6F7F4;font-family:'Plus Jakarta Sans',Arial,Helvetica,sans-serif;color:#10211F;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#FFFFFF;border:1px solid #DCE3E0;border-radius:14px;overflow:hidden;">
+    <tr>
+      <td style="background:#0B6E5F;padding:22px 28px;">
+        <img src="https://aidumed.app/assets/img/logo-aidu-med-blanco.png" alt="Aidú Med" height="34" style="display:block;height:34px;border:0;">
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:30px 28px 8px;">
+        <h1 style="margin:0 0 14px;font-size:22px;line-height:1.25;color:#10211F;">Su enlace para entrar</h1>
+        <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#4A5A57;">Use este botón para iniciar sesión en Aidú Med. Solo funciona una vez.</p>
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#0B6E5F;border-radius:10px;">
+          <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:13px 26px;font-size:15px;font-weight:bold;color:#FFFFFF;text-decoration:none;">Iniciar sesión</a>
+        </td></tr></table>
+        <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#4A5A57;">Si usted no lo solicitó, ignore este mensaje.</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:22px 28px 26px;">
+        <p style="margin:0;padding-top:16px;border-top:1px solid #DCE3E0;font-size:12px;line-height:1.6;color:#4A5A57;">Si el botón no funciona, copie y pegue este enlace en su navegador:<br><a href="{{ .ConfirmationURL }}" style="color:#0B6E5F;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
+        <p style="margin:14px 0 0;font-size:12px;line-height:1.6;color:#4A5A57;">Aidú Med · Aidú S. de R.L. · San Pedro Sula, Honduras<br><a href="https://aidumed.app" style="color:#0B6E5F;">aidumed.app</a></p>
+      </td>
+    </tr>
+  </table>
+</div>

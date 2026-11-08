@@ -223,7 +223,9 @@
   // ---------- Guardar ----------
   function comprimir(archivo) {
     return new Promise(function (resolver) {
-      if (!archivo || !/^image\//.test(archivo.type) || archivo.size < 900000) { resolver(archivo); return; }
+      // JPG, PNG y WEBP livianos pasan tal cual; todo lo demás (AVIF, HEIC, fotos grandes) se convierte a JPG.
+      var comun = /^image\/(jpeg|png|webp)$/.test(archivo.type);
+      if (!archivo || (comun && archivo.size < 900000)) { resolver(archivo); return; }
       var img = new Image();
       img.onload = function () {
         var escala = Math.min(1, 1600 / Math.max(img.width, img.height));
@@ -240,7 +242,7 @@
     var archivo = input.files && input.files[0];
     if (!archivo) return null;
     archivo = await comprimir(archivo);
-    var ext = archivo.type === 'image/png' ? 'png' : archivo.type === 'image/webp' ? 'webp' : 'jpg';
+    var ext = { 'image/png': 'png', 'image/webp': 'webp', 'image/heic': 'heic', 'image/heif': 'heif', 'image/avif': 'avif' }[archivo.type] || 'jpg';
     var ruta = uid + '/' + nombre + '.' + ext;
     var r = await sb.storage.from(bucket).upload(ruta, archivo, { upsert: true, contentType: archivo.type || 'image/jpeg' });
     if (r.error) throw r.error;
