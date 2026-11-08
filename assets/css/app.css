@@ -167,3 +167,4 @@ figcaption .enlace-boton { padding: 0; font-size: 13px; }
   .srv-duracion { justify-self: start; }
   .caja { padding: 20px 18px; }
 }
+.tabla tr.fila-cuenta { cursor: default; } .tabla tr.fila-cuenta:hover td { background: transparent; }

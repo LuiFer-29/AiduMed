@@ -18,13 +18,14 @@
   }
 
   var medicos = [];
+  var sinRegistro = [];
   var filtro = 'en_revision';
   var filtros = [
     ['en_revision', 'Por revisar', 'Enviaron su registro completo y esperan su revisión.'],
     ['aprobado', 'Aprobados', 'Usted ya los aprobó; falta configurar y probar su asistente de WhatsApp. Cuando esté funcionando, márquelos como activos.'],
     ['activo', 'Activos', 'Su asistente ya está funcionando y recibiendo citas.'],
     ['rechazado', 'Requieren cambios', 'Les pidió corregir algo; esperan que lo reenvíen.'],
-    ['borrador', 'Registro incompleto', 'Crearon su cuenta pero no han terminado el formulario. No requieren acción; puede escribirles para animarlos.'],
+    ['borrador', 'Registro incompleto', 'Crearon su cuenta pero no han terminado el formulario (o ni siquiera lo empiezan: «Solo cuenta»). No requieren acción; puede escribirles para animarlos.'],
     ['pausado', 'Pausados', 'Su asistente está detenido temporalmente.'],
     ['todos', 'Todos', 'Todos los médicos registrados.']
   ];
@@ -33,7 +34,7 @@
 
   function pintarFiltros() {
     $('filtros').innerHTML = filtros.map(function (f) {
-      var n = f[0] === 'todos' ? medicos.length : medicos.filter(function (m) { return m.estado === f[0]; }).length;
+      var n = f[0] === 'todos' ? medicos.length + sinRegistro.length : medicos.filter(function (m) { return m.estado === f[0]; }).length + (f[0] === 'borrador' ? sinRegistro.length : 0);
       return '<button type="button" data-f="' + f[0] + '" aria-pressed="' + (filtro === f[0]) + '">' + f[1] + ' (' + n + ')</button>';
     }).join('');
     $('filtros').querySelectorAll('button').forEach(function (b) {
@@ -46,7 +47,8 @@
   function pintar() {
     pintarFiltros();
     var lista = medicos.filter(function (m) { return filtro === 'todos' || m.estado === filtro; });
-    if (!lista.length) { $('filas').innerHTML = '<tr><td colspan="6" class="vacio">No hay médicos en este estado.</td></tr>'; return; }
+    var cuentas = (filtro === 'borrador' || filtro === 'todos') ? sinRegistro : [];
+    if (!lista.length && !cuentas.length) { $('filas').innerHTML = '<tr><td colspan="6" class="vacio">No hay médicos en este estado.</td></tr>'; return; }
     $('filas').innerHTML = lista.map(function (m) {
       var e = App.estados[m.estado] || App.estados.borrador;
       return '<tr data-id="' + m.id + '" tabindex="0">' +
@@ -56,6 +58,13 @@
         '<td>' + esc(m.whatsapp_consultorio || '—') + '</td>' +
         '<td>' + fecha(m.enviado_at) + '</td>' +
         '<td><span class="estado ' + e.clase + '">' + e.texto + '</span></td></tr>';
+    }).join('') + cuentas.map(function (c) {
+      // Cuentas que crearon usuario pero aún no guardan el primer paso del formulario (no tienen ficha).
+      return '<tr class="fila-cuenta">' +
+        '<td><strong>' + esc(c.correo) + '</strong><br><span class="ayuda">' + (c.confirmada ? 'Correo confirmado' : 'Correo sin confirmar') + '</span></td>' +
+        '<td colspan="3" class="ayuda">Aún no empieza el formulario de registro.</td>' +
+        '<td>' + fecha(c.creada) + '</td>' +
+        '<td><span class="estado estado-gris">Solo cuenta</span></td></tr>';
     }).join('');
     $('filas').querySelectorAll('tr[data-id]').forEach(function (tr) {
       var abrir = function () { verDetalle(tr.dataset.id); };
@@ -68,6 +77,8 @@
     var r = await sb.from('medicos').select('*').order('enviado_at', { ascending: false, nullsFirst: false });
     if (r.error) { $('cargando').textContent = 'No se pudo cargar la lista: ' + r.error.message; return; }
     medicos = r.data;
+    var c = await sb.rpc('cuentas_sin_registro');
+    sinRegistro = c.error ? [] : c.data || [];
     $('cargando').hidden = true;
     $('panel').hidden = false;
     pintar();

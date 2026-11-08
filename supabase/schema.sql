@@ -142,3 +142,17 @@ create policy "foto: reemplazar propia" on storage.objects for update to authent
 drop policy if exists "foto: ver propia o admin" on storage.objects;
 create policy "foto: ver propia o admin" on storage.objects for select to authenticated
   using (bucket_id = 'fotos' and ((storage.foldername(name))[1] = auth.uid()::text or public.es_admin()));
+
+-- Cuentas sin ficha de médico (solo administradores): para el filtro "Registro incompleto".
+create or replace function public.cuentas_sin_registro()
+returns table (id uuid, correo text, creada timestamptz, confirmada boolean)
+language sql stable security definer set search_path = public, auth as $$
+  select u.id, u.email::text, u.created_at, u.email_confirmed_at is not null
+  from auth.users u
+  where public.es_admin()
+    and not exists (select 1 from public.medicos m where m.id = u.id)
+    and not exists (select 1 from public.admins a where a.user_id = u.id)
+  order by u.created_at desc;
+$$;
+revoke all on function public.cuentas_sin_registro() from public, anon;
+grant execute on function public.cuentas_sin_registro() to authenticated;
