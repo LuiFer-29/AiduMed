@@ -13,7 +13,7 @@ const esc = (t: unknown) =>
   String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 
 type Medico = { correo?: string; titulo?: string; nombre?: string; estado?: string; nota_admin?: string };
-type Mensaje = { asunto: string; titulo: string; parrafos: string[]; nota?: string; boton: string };
+type Mensaje = { asunto: string; titulo: string; parrafos: string[]; nota?: string; despues?: string; boton: string };
 
 function saludo(m: Medico) {
   const t = m.titulo || "";
@@ -27,6 +27,7 @@ const mensajes: Record<string, (m: Medico) => Mensaje> = {
     titulo: "Necesitamos un pequeño ajuste",
     parrafos: [saludo(m), "Revisamos su registro y, antes de aprobarlo, necesitamos que ajuste lo siguiente:"],
     nota: m.nota_admin || "",
+    despues: "Entre a su perfil, toque «Editar mis datos» y vuelva a enviarlo. Lo revisaremos de nuevo apenas lo recibamos.",
     boton: "Revisar mis datos",
   }),
   aprobado: (m) => ({
@@ -54,9 +55,10 @@ const mensajes: Record<string, (m: Medico) => Mensaje> = {
     titulo: "Su asistente está en pausa",
     parrafos: [
       saludo(m),
-      "Su asistente de citas fue pausado temporalmente, así que por ahora no está recibiendo citas nuevas.",
-      "Si tiene dudas, responda este correo o escríbanos a info@aidu.pro.",
+      "Pausamos temporalmente su asistente de citas, así que por ahora no está recibiendo citas nuevas." + (m.nota_admin ? " El motivo:" : ""),
     ],
+    nota: m.nota_admin || "",
+    despues: "Si tiene dudas o desea reactivarlo, responda este correo o escríbanos a info@aidu.pro.",
     boton: "Ver mi perfil",
   }),
 };
@@ -67,14 +69,17 @@ function html(m: Mensaje) {
     .join("");
   const nota = m.nota
     ? `<div style="margin:4px 0 22px;padding:14px 16px;background:#E3F1EE;border-left:4px solid #0B6E5F;border-radius:8px;font-size:15px;line-height:1.6;color:#10211F;white-space:pre-line;">${esc(m.nota)}</div>
-       <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#4A5A57;">Entre a su perfil, toque «Editar mis datos» y vuelva a enviarlo. Lo revisaremos de nuevo apenas lo recibamos.</p>`
+`
+    : "";
+  const despues = m.despues
+    ? `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#4A5A57;">${esc(m.despues)}</p>`
     : "";
   return `<div style="margin:0;padding:24px 12px;background:#F6F7F4;font-family:'Plus Jakarta Sans',Arial,Helvetica,sans-serif;color:#10211F;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#FFFFFF;border:1px solid #DCE3E0;border-radius:14px;overflow:hidden;">
     <tr><td style="background:#0B6E5F;padding:22px 28px;"><img src="https://aidumed.app/assets/img/logo-aidu-med-blanco.png" alt="Aidú Med" height="34" style="display:block;height:34px;border:0;"></td></tr>
     <tr><td style="padding:30px 28px 8px;">
       <h1 style="margin:0 0 16px;font-size:22px;line-height:1.25;color:#10211F;">${esc(m.titulo)}</h1>
-      ${ps}${nota}
+      ${ps}${nota}${despues}
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:8px;"><tr><td style="background:#0B6E5F;border-radius:10px;">
         <a href="https://aidumed.app/mi-perfil" style="display:inline-block;padding:13px 26px;font-size:15px;font-weight:bold;color:#FFFFFF;text-decoration:none;">${esc(m.boton)}</a>
       </td></tr></table>
@@ -87,7 +92,7 @@ function html(m: Mensaje) {
 }
 
 function texto(m: Mensaje) {
-  return [m.titulo, "", ...m.parrafos, m.nota ? `\n${m.nota}\n\nEntre a su perfil, toque «Editar mis datos» y vuelva a enviarlo.` : "", "", "https://aidumed.app/mi-perfil", "", "Aidú Med · San Pedro Sula, Honduras"].join("\n");
+  return [m.titulo, "", ...m.parrafos, m.nota ? `\n${m.nota}\n` : "", m.despues || "", "", "https://aidumed.app/mi-perfil", "", "Aidú Med · San Pedro Sula, Honduras"].join("\n");
 }
 
 Deno.serve(async (req) => {
@@ -107,5 +112,6 @@ Deno.serve(async (req) => {
     html: html(m),
     text: texto(m),
   });
-  return new Response("Enviado");
+  console.log(`Aviso '${medico.estado}' enviado a ${medico.correo}`);
+  return new Response(`Enviado: ${medico.estado}`);
 });

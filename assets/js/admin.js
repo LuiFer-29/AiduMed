@@ -96,7 +96,7 @@
         fila('Aceptó términos', fecha(m.acepta_terminos_at)) +
       '</dl></section>' +
       '<section class="caja"><h2>Decisión</h2>' +
-        '<label class="campo">Nota para el médico (se muestra si pide cambios)<textarea id="nota">' + esc(m.nota_admin || '') + '</textarea></label>' +
+        '<label class="campo">Nota para el médico (obligatoria al pedir cambios o pausar; se incluye en el correo)<textarea id="nota">' + esc(m.nota_admin || '') + '</textarea></label>' +
         '<div class="acciones-admin">' +
           (wa ? '<a class="boton boton-secundario boton-chico" href="https://wa.me/504' + wa.slice(-8) + '" target="_blank" rel="noopener">Escribir por WhatsApp</a>' : '') +
           '<button type="button" class="boton boton-primario boton-chico" data-estado="aprobado">Aprobar</button>' +
@@ -111,9 +111,10 @@
         var nuevo = b.dataset.estado;
         var nota = $('nota').value.trim();
         var msg = $('msg-det');
-        if (nuevo === 'rechazado' && !nota) { msg.className = 'mensaje error'; msg.textContent = 'Escriba una nota explicando qué debe corregir.'; msg.hidden = false; return; }
+        var conNota = nuevo === 'rechazado' || nuevo === 'pausado';
+        if (conNota && !nota) { msg.className = 'mensaje error'; msg.textContent = nuevo === 'pausado' ? 'Escriba el motivo de la pausa; se lo enviaremos al médico.' : 'Escriba una nota explicando qué debe corregir.'; msg.hidden = false; $('nota').focus(); return; }
         b.disabled = true;
-        var r = await sb.from('medicos').update({ estado: nuevo, nota_admin: nota || null }).eq('id', m.id).select().single();
+        var r = await sb.from('medicos').update({ estado: nuevo, nota_admin: conNota ? nota : null }).eq('id', m.id).select().single();
         b.disabled = false;
         if (r.error) { msg.className = 'mensaje error'; msg.textContent = r.error.message; msg.hidden = false; return; }
         Object.assign(m, r.data);

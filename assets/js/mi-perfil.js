@@ -24,7 +24,7 @@
   $('estado-texto').textContent = textos[p.estado] || '';
   if (p.estado === 'borrador') $('editar').textContent = 'Continuar registro';
   if (p.estado === 'rechazado') $('editar').textContent = 'Corregir y reenviar';
-  if (p.nota_admin && p.estado === 'rechazado') { $('nota-admin').textContent = 'Nota del equipo de Aidú Med: ' + p.nota_admin; $('nota-admin').hidden = false; }
+  if (p.nota_admin && (p.estado === 'rechazado' || p.estado === 'pausado')) { $('nota-admin').textContent = (p.estado === 'pausado' ? 'Motivo de la pausa: ' : 'Nota del equipo de Aidú Med: ') + p.nota_admin; $('nota-admin').hidden = false; }
 
   function llenar(id, pares) {
     $(id).innerHTML = pares.filter(function (x) { return x[1]; }).map(function (x) {
