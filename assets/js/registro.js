@@ -266,7 +266,7 @@
       servicios: Array.prototype.map.call(lista.querySelectorAll('.servicio'), function (s) {
         var nombre = s.querySelector('.s-nombre').value.trim();
         if (!nombre) return null;
-        return { nombre: nombre, duracion: s.querySelector('.s-duracion').value, precio: soloDigitos(s.querySelector('.s-precio').value) || null };
+        return { nombre: nombre, duracion: s.querySelector('.s-duracion').value, precio: soloDigitos((s.querySelector('.s-precio').value || '').split('.')[0]) || null };
       }).filter(Boolean)
     };
     return {

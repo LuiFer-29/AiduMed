@@ -64,8 +64,10 @@ window.AIDU_SB = {
       if (/rate limit|too many/i.test(m)) return 'Demasiados intentos. Espere unos minutos e intente de nuevo.';
       if (/mime type|invalid_mime/i.test(m)) return 'Ese formato de imagen no es compatible. Use una foto JPG o PNG.';
       if (/exceeded the maximum|too large|Payload/i.test(m)) return 'La imagen es muy pesada (máximo 6 MB). Use una foto más liviana.';
-      if (/network|fetch/i.test(m)) return 'No hay conexión. Revise su internet e intente de nuevo.';
-      return 'Ocurrió un error. Intente de nuevo o escríbanos a info@aidu.pro.';
+      if (/network|fetch|load failed|timed out|offline/i.test(m)) return 'Se perdió la conexión un momento. Toque el botón de nuevo.';
+      var codigo = (e && (e.code || e.name)) || '';
+      codigo = String(codigo || m).slice(0, 60);
+      return 'Ocurrió un error. Intente de nuevo o escríbanos a info@aidu.pro.' + (codigo ? ' (Detalle: ' + codigo + ')' : '');
     },
 
     escapar: function (t) {
