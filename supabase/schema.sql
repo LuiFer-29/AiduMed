@@ -118,8 +118,8 @@ create trigger medicos_editar before update on public.medicos
 
 -- ---------- Archivos ----------
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values
-  ('carnes', 'carnes', false, 6291456, array['image/jpeg', 'image/png', 'image/webp', 'image/heic']),
-  ('fotos', 'fotos', true, 6291456, array['image/jpeg', 'image/png', 'image/webp', 'image/heic'])
+  ('carnes', 'carnes', false, 6291456, array['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'image/avif']),
+  ('fotos', 'fotos', true, 6291456, array['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'image/avif'])
 on conflict (id) do nothing;
 
 drop policy if exists "carné: subir propio" on storage.objects;
