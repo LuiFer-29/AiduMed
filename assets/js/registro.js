@@ -88,7 +88,7 @@
       var horasOk = desde && hasta && hasta > desde;
       document.getElementById('error-horas').classList.toggle('visible', !horasOk);
       if (!horasOk) { ok = false; primero = primero || form.elements.hora_hasta; }
-      revisar('acepta_privacidad', function (c) { return c.checked; });
+      revisar('acepta_terminos_y_privacidad', function (c) { return c.checked; });
     }
     if (primero && primero.focus) primero.focus();
     return ok;

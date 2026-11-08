@@ -50,6 +50,7 @@ p { margin: 0; }
 .menu { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; font-size: 15px; font-weight: 500; }
 .menu a { color: var(--tinta); text-decoration: none; }
 .menu a:hover { color: var(--verde); }
+.menu a.boton-primario, .menu a.boton-primario:hover { color: var(--blanco); }
 .menu .boton { min-height: 44px; padding: 10px 20px; font-size: 15px; font-weight: 600; border-radius: 10px; }
 @media (max-width: 640px) { .menu a:not(.boton) { display: none; } }
 

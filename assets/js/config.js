@@ -3,7 +3,7 @@
 // (solo dígitos, con 504 al inicio). Ejemplo: '50499998888'
 // Mientras esté vacío, los botones de WhatsApp quedan ocultos.
 window.AIDU = {
-  whatsapp: '',
+  whatsapp: '50492980013',
   mensajeWhatsapp: 'Hola, quiero saber más sobre Aidú Med para mi consultorio.'
 };
 
