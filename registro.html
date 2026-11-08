@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Registro de médicos · Aidú Med</title>
-<meta name="description" content="Registre su consultorio en Aidú Med en 4 pasos.">
+<meta name="description" content="Registre su consultorio en Aidú Med en 5 pasos.">
 <meta name="theme-color" content="#0B6E5F">
 <meta name="robots" content="noindex">
 <link rel="icon" type="image/png" href="/assets/img/favicon.png">
@@ -13,11 +13,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=4">
-<link rel="stylesheet" href="/assets/css/registro.css?v=4">
-<link rel="stylesheet" href="/assets/css/app.css?v=4">
+<link rel="stylesheet" href="/assets/css/registro.css?v=8">
+<link rel="stylesheet" href="/assets/css/app.css?v=8">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
-<script src="/assets/js/app.js?v=6" defer></script>
-<script src="/assets/js/registro.js?v=6" defer></script>
+<script src="/assets/js/app.js?v=8" defer></script>
+<script src="/assets/js/registro.js?v=8" defer></script>
 </head>
 <body class="registro">
 
@@ -28,9 +28,9 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
       </button>
       <a href="/" aria-label="Aidú Med, inicio"><img src="/assets/img/logo-aidu-med.png" alt="Aidú Med" width="600" height="138" class="registro-logo"></a>
-      <div class="registro-paso" id="paso-texto" aria-live="polite">1 de 4</div>
+      <div class="registro-paso" id="paso-texto" aria-live="polite">1 de 5</div>
     </div>
-    <div class="progreso" role="progressbar" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1" aria-label="Avance del registro"><div class="progreso-barra" id="progreso"></div></div>
+    <div class="progreso" role="progressbar" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1" aria-label="Avance del registro"><div class="progreso-barra" id="progreso"></div></div>
   </header>
 
   <form id="formulario" novalidate>
@@ -77,8 +77,9 @@
             <span class="error" data-error-for="colegiacion">Escriba su número de colegiación.</span>
           </label>
           <label class="subir-carne" for="carne">
-            <span class="subir-icono"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M15 8h2M15 12h2M7 16h10"/></svg></span>
+            <span class="subir-icono"><img id="carne-mini" alt="" hidden><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M15 8h2M15 12h2M7 16h10"/></svg></span>
             <span class="subir-texto"><strong id="carne-titulo">Foto de su carné de colegiado</strong><span id="carne-sub">Tómela con el celular, solo el frente</span></span>
+            <span class="carne-check" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>
           </label>
           <input class="archivo" type="file" id="carne" name="foto_carne" accept="image/*">
           <span class="error" data-error-for="foto_carne">Agregue la foto de su carné.</span>
@@ -108,6 +109,11 @@
           <span id="ubicacion-texto">Usar mi ubicación actual</span>
         </button>
         <p class="nota-simple">Úselo si está en el consultorio. Así sus pacientes lo encuentran en el mapa.</p>
+        <label class="campo">O pegue el enlace de Google Maps (opcional)
+          <input type="url" name="enlace_mapa" inputmode="url" placeholder="https://maps.app.goo.gl/…">
+          <span class="ayuda">En Google Maps busque su consultorio, toque «Compartir» y copie el enlace.</span>
+          <span class="error" data-error-for="enlace_mapa">Pegue un enlace de Google Maps (empieza con https://maps.app.goo.gl o https://www.google.com/maps).</span>
+        </label>
 
         <label class="campo">WhatsApp del consultorio
           <span class="telefono"><span class="prefijo">+504</span><input type="tel" name="whatsapp_consultorio" inputmode="numeric" maxlength="9" placeholder="9999-9999" required></span>
@@ -151,7 +157,7 @@
                 <select class="s-duracion"><option>15 min</option><option selected>30 min</option><option>45 min</option><option>60 min</option><option>90 min</option></select>
               </label>
               <label class="campo">Precio (L)
-                <input type="text" class="s-precio" inputmode="numeric" placeholder="Ej. 800">
+                <input type="text" class="s-precio" inputmode="numeric" placeholder="Ej. 1,200">
               </label>
             </div>
           </div>
@@ -198,20 +204,56 @@
           <button type="button" class="tarjeta-opcion" data-vacacion="Semana Santa" aria-pressed="true"><span><strong>Semana Santa</strong><span>Toda la semana</span></span><span class="casilla" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span></button>
           <button type="button" class="tarjeta-opcion" data-vacacion="Semana Morazánica" aria-pressed="true"><span><strong>Semana Morazánica</strong><span>Según la fecha oficial del año</span></span><span class="casilla" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span></button>
           <button type="button" class="tarjeta-opcion" data-vacacion="Navidad y Año Nuevo" aria-pressed="true"><span><strong>Navidad y Año Nuevo</strong><span>Del 24 de diciembre al 1 de enero</span></span><span class="casilla" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span></button>
+          <div class="etiqueta-campo otras-titulo">Otras fechas libres</div>
+          <div id="lista-fechas" class="lista-fechas"></div>
           <button type="button" class="boton-agregar" id="agregar-fechas">+ Agregar otras fechas</button>
-          <label class="campo" id="campo-otras-fechas" hidden>Otras fechas
-            <textarea name="otras_fechas" rows="2" placeholder="Ej. Congreso del 10 al 14 de marzo"></textarea>
-          </label>
+          <template id="plantilla-fecha">
+            <div class="fecha-fila">
+              <div class="dos-columnas">
+                <label class="campo">Desde<input type="date" class="f-desde"></label>
+                <label class="campo">Hasta<input type="date" class="f-hasta"></label>
+              </div>
+              <label class="campo">Motivo (opcional)<input type="text" class="f-motivo" placeholder="Ej. Congreso médico"></label>
+              <span class="error f-error">Elija la fecha de inicio, y que la final no sea antes que la inicial.</span>
+              <button type="button" class="quitar">Quitar estas fechas</button>
+            </div>
+          </template>
         </div>
 
         <label class="casilla-linea"><input type="checkbox" name="conectar_google_calendar" value="Sí"><span>Quiero conectar mi Google Calendar</span></label>
+
+      </fieldset>
+
+      <!-- Paso 5 -->
+      <fieldset class="paso-form" data-paso="5" hidden aria-labelledby="titulo-paso-5">
+        <h1 class="paso-titulo" id="titulo-paso-5">Su plan</h1>
+        <p class="paso-sub">No cobramos nada hasta aprobar su registro. Puede cambiar de plan cuando quiera.</p>
+        <div class="planes-opciones" role="radiogroup" aria-label="Planes">
+          <label class="plan-opcion"><input type="radio" name="plan" value="Piloto fundador"><span class="plan-caja">
+            <span class="plan-fila"><strong>Piloto fundador</strong><span class="plan-etiqueta">Solo 10 cupos</span><span class="plan-precio">$29<small>/mes</small></span></span>
+            <span class="plan-detalle">Por 6 meses, con todo lo del plan Profesional y acompañamiento directo. Al terminar, 20 % de descuento para siempre.</span>
+            <span class="casilla" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>
+          </span></label>
+          <label class="plan-opcion"><input type="radio" name="plan" value="Básico"><span class="plan-caja">
+            <span class="plan-fila"><strong>Básico</strong><span class="plan-etiqueta">Recomendado</span><span class="plan-precio">$49<small>/mes</small></span></span>
+            <span class="plan-detalle">Asistente 24/7 en el WhatsApp de Aidú Med, recordatorios, enlace y código QR propios.</span>
+            <span class="casilla" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>
+          </span></label>
+          <label class="plan-opcion"><input type="radio" name="plan" value="Profesional"><span class="plan-caja">
+            <span class="plan-fila"><strong>Profesional</strong><span class="plan-precio">$99<small>/mes</small></span></span>
+            <span class="plan-detalle">Todo lo del Básico, y el asistente también atiende en su propio número de WhatsApp.</span>
+            <span class="casilla" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>
+          </span></label>
+        </div>
+        <span class="error" data-error-for="plan">Elija un plan para continuar.</span>
+        <a class="enlace-comparar" href="/#precios" target="_blank" rel="noopener">Comparar los planes en detalle</a>
 
         <label class="casilla-linea consentimiento"><input type="checkbox" name="acepta_terminos_y_privacidad" value="Sí" required><span>Acepto los <a href="/terminos" target="_blank" rel="noopener">términos y condiciones</a> y el <a href="/privacidad" target="_blank" rel="noopener">aviso de privacidad</a> de Aidú Med.</span></label>
         <span class="error" data-error-for="acepta_terminos_y_privacidad">Debe aceptar los términos y el aviso de privacidad para continuar.</span>
       </fieldset>
 
       <!-- Final -->
-      <section class="paso-form final" data-paso="5" hidden aria-live="polite">
+      <section class="paso-form final" data-paso="6" hidden aria-live="polite">
         <div class="final-icono"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></div>
         <h1 id="final-titulo">¡Listo! Ya recibimos sus datos</h1>
         <p id="final-texto">Revisaremos su colegiación y le escribiremos por WhatsApp en las próximas 24 horas para probar su asistente juntos antes de activarlo.</p>

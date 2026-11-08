@@ -9,9 +9,25 @@
 
   if (!(await App.esAdmin())) { $('cargando').hidden = true; $('sin-permiso').hidden = false; return; }
 
+  // Por seguridad, la sesión de administrador dura 8 horas; después pide la contraseña otra vez.
+  var HORAS = 8;
+  if (Date.now() - Date.parse(sesion.user.last_sign_in_at || 0) > HORAS * 3600 * 1000) {
+    await sb.auth.signOut();
+    location.replace('/cuenta?modo=entrar&expirada=1&siguiente=%2Fadmin');
+    return;
+  }
+
   var medicos = [];
   var filtro = 'en_revision';
-  var filtros = [['en_revision', 'Por revisar'], ['aprobado', 'En configuración'], ['activo', 'Activos'], ['rechazado', 'Requieren cambios'], ['borrador', 'Sin terminar'], ['pausado', 'Pausados'], ['todos', 'Todos']];
+  var filtros = [
+    ['en_revision', 'Por revisar', 'Enviaron su registro completo y esperan su revisión.'],
+    ['aprobado', 'Aprobados', 'Usted ya los aprobó; falta configurar y probar su asistente de WhatsApp. Cuando esté funcionando, márquelos como activos.'],
+    ['activo', 'Activos', 'Su asistente ya está funcionando y recibiendo citas.'],
+    ['rechazado', 'Requieren cambios', 'Les pidió corregir algo; esperan que lo reenvíen.'],
+    ['borrador', 'Registro incompleto', 'Crearon su cuenta pero no han terminado el formulario. No requieren acción; puede escribirles para animarlos.'],
+    ['pausado', 'Pausados', 'Su asistente está detenido temporalmente.'],
+    ['todos', 'Todos', 'Todos los médicos registrados.']
+  ];
 
   function fecha(t) { return t ? new Date(t).toLocaleDateString('es-HN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'; }
 
@@ -23,6 +39,8 @@
     $('filtros').querySelectorAll('button').forEach(function (b) {
       b.addEventListener('click', function () { filtro = b.dataset.f; pintar(); });
     });
+    var actualF = filtros.find(function (f) { return f[0] === filtro; });
+    $('filtro-ayuda').textContent = actualF ? actualF[2] : '';
   }
 
   function pintar() {
@@ -63,7 +81,32 @@
 
   function cerrar() { $('detalle-fondo').hidden = true; document.body.style.overflow = ''; }
   $('detalle-fondo').addEventListener('click', function (ev) { if (ev.target === this) cerrar(); });
-  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') cerrar(); });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Escape') return;
+    if (!$('visor').hidden) cerrarVisor(); else cerrar();
+  });
+
+  // ---------- Visor del carné: centrado, con zoom y giro ----------
+  var zoom = 1, giro = 0;
+  function aplicarVisor() {
+    var img = $('visor-img');
+    img.style.transform = 'rotate(' + giro + 'deg)';
+    img.classList.toggle('ampliada', zoom > 1);
+    img.style.width = zoom > 1 ? (zoom * 100) + '%' : '';
+    $('visor-zoom').textContent = zoom > 1 ? 'Reducir' : 'Ampliar';
+  }
+  function abrirVisor(src) {
+    zoom = 1; giro = 0;
+    $('visor-img').src = src;
+    aplicarVisor();
+    $('visor').hidden = false;
+    $('visor-cerrar').focus();
+  }
+  function cerrarVisor() { $('visor').hidden = true; }
+  $('visor-cerrar').addEventListener('click', cerrarVisor);
+  $('visor-zoom').addEventListener('click', function () { zoom = zoom > 1 ? 1 : 2; aplicarVisor(); });
+  $('visor-girar').addEventListener('click', function () { giro = (giro + 90) % 360; aplicarVisor(); });
+  $('visor').addEventListener('click', function (ev) { if (ev.target === this || ev.target.classList.contains('visor-lienzo')) cerrarVisor(); });
 
   async function verDetalle(id) {
     var m = medicos.find(function (x) { return x.id === id; });
@@ -76,7 +119,7 @@
     $('detalle').innerHTML =
       '<div class="detalle-cabecera"><div><h2 id="det-nombre">' + esc([m.titulo, m.nombre].filter(Boolean).join(' ') || m.correo) + '</h2><span class="estado ' + e.clase + '">' + e.texto + '</span></div><button type="button" class="cerrar" aria-label="Cerrar">×</button></div>' +
       '<div class="imagenes">' +
-        '<figure>' + (urls[0] ? '<a href="' + urls[0] + '" target="_blank" rel="noopener"><img src="' + urls[0] + '" alt="Carné de colegiado"></a>' : '<div class="vacio">Sin carné</div>') + '<figcaption><span>Carné de colegiado</span>' + (urls[0] ? '<a href="' + urls[0] + '" target="_blank" rel="noopener">Abrir</a>' : '') + '</figcaption></figure>' +
+        '<figure>' + (urls[0] ? '<button type="button" class="ver-imagen" data-src="' + urls[0] + '" aria-label="Ver carné en grande"><img src="' + urls[0] + '" alt="Carné de colegiado"></button>' : '<div class="vacio">Sin carné</div>') + '<figcaption><span>Carné de colegiado</span>' + (urls[0] ? '<button type="button" class="enlace-boton ver-imagen" data-src="' + urls[0] + '">Ver en grande</button>' : '') + '</figcaption></figure>' +
         '<figure>' + (urls[1] ? '<img src="' + urls[1] + '" alt="Foto de perfil">' : '<div class="vacio">Sin foto</div>') + '<figcaption><span>Foto de perfil</span></figcaption></figure>' +
       '</div>' +
       '<section class="caja"><h2>Profesional</h2><dl class="datos">' +
@@ -91,7 +134,8 @@
         fila('Servicios', servicios) + fila('Días', (m.dias_atencion || []).join(', ')) +
         fila('Horario', m.hora_desde ? String(m.hora_desde).slice(0, 5) + ' a ' + String(m.hora_hasta).slice(0, 5) : '') +
         fila('Entre citas', m.tiempo_entre_citas) + fila('Agenda hasta', m.anticipacion) +
-        fila('Vacaciones', (m.vacaciones || []).join(', ') + (m.otras_fechas ? '\n' + m.otras_fechas : '')) +
+        fila('Vacaciones', (m.vacaciones || []).join(', ')) +
+        fila('Otras fechas', (m.otras_vacaciones || []).map(App.rangoFechas).join('\n') || m.otras_fechas) +
         fila('Google Calendar', m.conectar_google_calendar ? 'Quiere conectarlo' : '') +
         fila('Aceptó términos', fecha(m.acepta_terminos_at)) +
       '</dl></section>' +
@@ -106,6 +150,7 @@
         '</div><p class="mensaje" id="msg-det" hidden></p>' +
       '</section>';
     $('detalle').querySelector('.cerrar').addEventListener('click', cerrar);
+    $('detalle').querySelectorAll('.ver-imagen').forEach(function (b) { b.addEventListener('click', function () { abrirVisor(b.dataset.src); }); });
     $('detalle').querySelectorAll('[data-estado]').forEach(function (b) {
       b.addEventListener('click', async function () {
         var nuevo = b.dataset.estado;

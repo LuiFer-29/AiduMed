@@ -100,3 +100,41 @@ body.registro { background: #E9EEEB; min-height: 100vh; }
 .registro-pie { position: sticky; bottom: 0; background: var(--blanco); border-top: 1px solid var(--borde); padding: 14px 20px 20px; }
 .boton-ancho { width: 100%; min-height: 52px; }
 .boton[disabled] { opacity: .6; cursor: progress; }
+
+/* Carné con confirmación visual */
+.subir-icono { position: relative; overflow: hidden; }
+.subir-icono img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.subir-carne { position: relative; }
+.subir-carne .subir-texto { flex: 1; }
+.carne-check { display: none; flex: none; width: 30px; height: 30px; border-radius: 999px; background: var(--verde); align-items: center; justify-content: center; }
+.subir-carne.listo { background: var(--verde-tinte); }
+.subir-carne.listo .subir-icono { width: 52px; height: 40px; border-radius: 8px; }
+.subir-carne.listo .carne-check { display: flex; animation: aparecer .25s ease-out; }
+.subir-carne.listo #carne-sub { color: var(--verde); font-weight: 600; text-decoration: underline; }
+@keyframes aparecer { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* Otras fechas */
+.otras-titulo { margin-top: 6px; }
+.lista-fechas { display: flex; flex-direction: column; gap: 12px; }
+.lista-fechas:empty { display: none; }
+.fecha-fila { background: var(--blanco); border: 1px solid var(--borde); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.fecha-fila .quitar { align-self: flex-start; padding: 0; }
+.campo input[type="date"] { padding: 0 10px; }
+
+/* Planes */
+.planes-opciones { display: flex; flex-direction: column; gap: 12px; }
+.plan-opcion { position: relative; display: block; cursor: pointer; }
+.plan-opcion input { position: absolute; opacity: 0; }
+.plan-caja { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; padding: 16px; background: var(--blanco); border: 1px solid var(--borde-fuerte); border-radius: 14px; }
+.plan-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.plan-fila strong { font-size: 17px; color: var(--tinta); }
+.plan-etiqueta { font-size: 12px; font-weight: 700; color: var(--verde-oscuro); background: var(--verde-tinte); border-radius: 999px; padding: 3px 9px; }
+.plan-precio { width: 100%; font-family: var(--titulos); font-size: 22px; font-weight: 800; color: var(--verde); line-height: 1.1; }
+.plan-precio small { font-family: var(--texto); font-size: 13px; font-weight: 600; color: var(--texto-2); }
+.plan-detalle { grid-column: 1; font-size: 14px; line-height: 1.5; color: var(--texto-2); }
+.plan-caja .casilla { grid-column: 2; grid-row: 1 / span 2; align-self: center; border-radius: 999px; }
+.plan-opcion input:checked + .plan-caja { border-color: var(--verde); box-shadow: inset 0 0 0 1px var(--verde); background: #FBFEFD; }
+.plan-opcion input:checked + .plan-caja .casilla { background: var(--verde); border-color: var(--verde); }
+.plan-opcion input:checked + .plan-caja .casilla svg { visibility: visible; }
+.plan-opcion input:focus-visible + .plan-caja { outline: 3px solid var(--verde-claro); outline-offset: 2px; }
+.enlace-comparar { font-size: 14px; font-weight: 600; margin-top: -6px; }

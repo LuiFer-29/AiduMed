@@ -11,10 +11,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=4">
-<link rel="stylesheet" href="/assets/css/app.css?v=4">
+<link rel="stylesheet" href="/assets/css/app.css?v=8">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
-<script src="/assets/js/app.js?v=6" defer></script>
-<script src="/assets/js/admin.js?v=7" defer></script>
+<script src="/assets/js/app.js?v=8" defer></script>
+<script src="/assets/js/admin.js?v=8" defer></script>
 </head>
 <body class="app">
 <header class="barra-app">
@@ -29,6 +29,7 @@
   <div id="panel" hidden style="display:flex;flex-direction:column;gap:20px">
     <h1>Médicos registrados</h1>
     <div class="filtros" role="group" aria-label="Filtrar por estado" id="filtros"></div>
+    <p class="filtro-ayuda" id="filtro-ayuda"></p>
     <div class="tabla-caja">
       <table class="tabla">
         <thead><tr><th>Médico</th><th>Especialidad</th><th>Plan</th><th>WhatsApp</th><th>Enviado</th><th>Estado</th></tr></thead>
@@ -37,6 +38,17 @@
     </div>
   </div>
 </main>
+<div class="visor" id="visor" role="dialog" aria-modal="true" aria-label="Carné de colegiado" hidden>
+  <div class="visor-barra">
+    <span>Carné de colegiado</span>
+    <div class="visor-botones">
+      <button type="button" class="boton boton-secundario boton-chico" id="visor-girar">Girar</button>
+      <button type="button" class="boton boton-secundario boton-chico" id="visor-zoom">Ampliar</button>
+      <button type="button" class="boton boton-primario boton-chico" id="visor-cerrar">Cerrar</button>
+    </div>
+  </div>
+  <div class="visor-lienzo"><img id="visor-img" alt="Carné de colegiado"></div>
+</div>
 <div class="detalle-fondo" id="detalle-fondo" hidden>
   <aside class="detalle" role="dialog" aria-modal="true" aria-labelledby="det-nombre" id="detalle"></aside>
 </div>

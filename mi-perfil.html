@@ -11,10 +11,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=4">
-<link rel="stylesheet" href="/assets/css/app.css?v=4">
+<link rel="stylesheet" href="/assets/css/app.css?v=8">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
-<script src="/assets/js/app.js?v=6" defer></script>
-<script src="/assets/js/mi-perfil.js?v=7" defer></script>
+<script src="/assets/js/app.js?v=8" defer></script>
+<script src="/assets/js/mi-perfil.js?v=8" defer></script>
 </head>
 <body class="app">
 <header class="barra-app">
@@ -26,19 +26,63 @@
 <main class="pagina-app" id="contenido">
   <p class="cargando" id="cargando">Cargando su perfil…</p>
   <div id="perfil" hidden>
-    <h1 id="saludo">Mi perfil</h1>
-    <section class="caja caja-estado" aria-labelledby="estado-titulo">
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <h2 id="estado-titulo">Estado de su registro</h2>
+    <div class="aviso-ok" id="aviso-guardado" role="status" hidden>Cambios guardados.</div>
+
+    <section class="perfil-hero">
+      <div class="perfil-foto" id="foto"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+      <div class="perfil-identidad">
+        <h1 id="saludo">Mi perfil</h1>
+        <p class="perfil-especialidad" id="especialidad"></p>
+        <span class="sello-verificado" id="sello" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9c-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2l4-4"/></svg>Médico verificado</span>
+      </div>
+      <div class="perfil-estado">
         <span id="estado" class="estado"></span>
         <p id="estado-texto"></p>
+        <a class="boton boton-primario boton-chico" id="editar" href="/registro" hidden>Editar mis datos</a>
       </div>
-      <a class="boton boton-primario" id="editar" href="/registro">Editar mis datos</a>
     </section>
     <div class="nota-admin" id="nota-admin" hidden></div>
-    <section class="caja"><h2>Datos profesionales</h2><dl class="datos" id="d-profesional"></dl></section>
-    <section class="caja"><h2>Consultorio</h2><dl class="datos" id="d-consultorio"></dl></section>
-    <section class="caja"><h2>Servicios y horarios</h2><dl class="datos" id="d-horarios"></dl></section>
+
+    <div class="tarjetas-perfil">
+      <section class="caja tarjeta-ancha">
+        <div class="caja-titulo"><h2>Servicios y precios</h2><a class="editar-enlace" href="/registro?paso=3">Editar</a></div>
+        <ul class="lista-servicios-perfil" id="servicios"></ul>
+      </section>
+
+      <section class="caja">
+        <div class="caja-titulo"><h2>Horario de atención</h2><a class="editar-enlace" href="/registro?paso=4">Editar</a></div>
+        <div class="semana" id="semana"></div>
+        <div class="hora-grande" id="horario"></div>
+        <dl class="mini-datos" id="reglas"></dl>
+      </section>
+
+      <section class="caja">
+        <div class="caja-titulo"><h2>Vacaciones y días libres</h2><a class="editar-enlace" href="/registro?paso=4">Editar</a></div>
+        <p class="ayuda">En estas fechas el asistente no agenda citas.</p>
+        <div class="chips" id="vacaciones"></div>
+        <ul class="lista-fechas-perfil" id="otras-fechas"></ul>
+      </section>
+
+      <section class="caja">
+        <div class="caja-titulo"><h2>Consultorio</h2><a class="editar-enlace" href="/registro?paso=2">Editar</a></div>
+        <dl class="mini-datos" id="consultorio"></dl>
+      </section>
+
+      <section class="caja">
+        <div class="caja-titulo"><h2>Datos profesionales</h2><a class="editar-enlace" href="/registro?paso=1">Editar</a></div>
+        <dl class="mini-datos" id="profesional"></dl>
+      </section>
+
+      <section class="caja">
+        <div class="caja-titulo"><h2>Su plan</h2><a class="editar-enlace" href="/registro?paso=5">Cambiar</a></div>
+        <div class="plan-perfil" id="plan"></div>
+      </section>
+
+      <section class="caja caja-pronto">
+        <div class="caja-titulo"><h2>Mis citas</h2><span class="etiqueta-pronto">Próximamente</span></div>
+        <p class="ayuda">Cuando su asistente esté activo, aquí verá sus próximas citas y el historial, y podrá reagendar o cancelar.</p>
+      </section>
+    </div>
   </div>
 </main>
 </body>

@@ -1,4 +1,5 @@
 // Aidú Med · Aviso por correo cuando cambia el estado de un médico.
+// Remitente: suscripciones@aidu.pro (los correos de cuenta salen de hola@aidu.pro).
 // Lo llama el trigger "medicos_avisar" (pg_net) con el encabezado x-aviso-secreto.
 import nodemailer from "npm:nodemailer@6.9.16";
 
@@ -106,7 +107,8 @@ Deno.serve(async (req) => {
   if (!crear) return new Response("Este estado no lleva aviso");
   const m = crear(medico);
   await transporte.sendMail({
-    from: '"Aidú Med" <hola@aidu.pro>',
+    from: '"Aidú Med" <suscripciones@aidu.pro>',
+    replyTo: "suscripciones@aidu.pro",
     to: medico.correo,
     subject: m.asunto,
     html: html(m),

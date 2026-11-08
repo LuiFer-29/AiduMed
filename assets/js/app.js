@@ -23,7 +23,8 @@ window.AIDU_SB = {
       var r = await sb.auth.getSession();
       var sesion = r.data && r.data.session;
       if (!sesion) {
-        irA('/cuenta?siguiente=' + encodeURIComponent(location.pathname + location.search));
+        var modo = location.pathname.indexOf('/registro') === 0 ? 'crear' : 'entrar';
+        irA('/cuenta?modo=' + modo + '&siguiente=' + encodeURIComponent(location.pathname + location.search));
         return new Promise(function () {});
       }
       return sesion;
@@ -46,7 +47,7 @@ window.AIDU_SB = {
     },
 
     estados: {
-      borrador: { texto: 'Registro sin terminar', clase: 'estado-gris' },
+      borrador: { texto: 'Registro incompleto', clase: 'estado-gris' },
       en_revision: { texto: 'En revisión', clase: 'estado-ambar' },
       aprobado: { texto: 'Aprobado · en configuración', clase: 'estado-azul' },
       rechazado: { texto: 'Requiere cambios', clase: 'estado-rojo' },
@@ -68,6 +69,22 @@ window.AIDU_SB = {
       var codigo = (e && (e.code || e.name)) || '';
       codigo = String(codigo || m).slice(0, 60);
       return 'Ocurrió un error. Intente de nuevo o escríbanos a info@aidu.pro.' + (codigo ? ' (Detalle: ' + codigo + ')' : '');
+    },
+
+    // 'L 1,200' a partir de dígitos.
+    miles: function (v) { var d = String(v == null ? '' : v).replace(/\D/g, ''); return d ? Number(d).toLocaleString('en-US') : ''; },
+
+    // {desde:'2027-03-10', hasta:'2027-03-14', motivo:'Congreso'} → '10–14 mar 2027 · Congreso'
+    rangoFechas: function (r) {
+      if (!r || !r.desde) return '';
+      var meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      var p = function (t) { var x = String(t).split('-'); return { a: +x[0], m: +x[1] - 1, d: +x[2] }; };
+      var d = p(r.desde), h = p(r.hasta || r.desde), txt;
+      if (r.desde === (r.hasta || r.desde)) txt = d.d + ' ' + meses[d.m] + ' ' + d.a;
+      else if (d.a === h.a && d.m === h.m) txt = d.d + '–' + h.d + ' ' + meses[d.m] + ' ' + d.a;
+      else if (d.a === h.a) txt = d.d + ' ' + meses[d.m] + ' – ' + h.d + ' ' + meses[h.m] + ' ' + d.a;
+      else txt = d.d + ' ' + meses[d.m] + ' ' + d.a + ' – ' + h.d + ' ' + meses[h.m] + ' ' + h.a;
+      return txt + (r.motivo ? ' · ' + r.motivo : '');
     },
 
     escapar: function (t) {

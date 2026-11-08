@@ -31,6 +31,7 @@
   $('tab-crear').addEventListener('click', function () { ponerModo('crear'); });
   $('tab-entrar').addEventListener('click', function () { ponerModo('entrar'); });
   ponerModo(modo);
+  if (params.get('expirada')) { $('error-acceso').className = 'mensaje ok'; $('error-acceso').textContent = 'Por seguridad, su sesión de administrador se cerró. Inicie sesión de nuevo.'; $('error-acceso').hidden = false; }
 
   document.querySelectorAll('[data-ver]').forEach(function (b) {
     b.addEventListener('click', function () {

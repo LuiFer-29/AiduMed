@@ -49,6 +49,7 @@ create table if not exists public.medicos (
   anticipacion text,
   vacaciones text[] not null default '{}',
   otras_fechas text,
+  otras_vacaciones jsonb not null default '[]'::jsonb,
   conectar_google_calendar boolean not null default false,
   acepta_terminos_at timestamptz,
   estado public.estado_medico not null default 'borrador',
