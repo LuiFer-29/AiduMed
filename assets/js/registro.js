@@ -361,15 +361,7 @@
     return { antes: antes, despues: perfil.estado };
   }
 
-  // Aviso sin datos sensibles para el equipo de Aidú Med (Netlify Forms → correo).
-  function avisarEquipo(tipo) {
-    var d = new URLSearchParams({
-      'form-name': 'aviso-registro', tipo: tipo,
-      nombre: (perfil.titulo || '') + ' ' + (perfil.nombre || ''), especialidad: perfil.especialidad_otra || perfil.especialidad || '',
-      correo: perfil.correo || sesion.user.email, plan: perfil.plan || '', whatsapp: perfil.whatsapp_consultorio || ''
-    });
-    fetch('/', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: d.toString() }).catch(function () {});
-  }
+  // El aviso al equipo lo envía Supabase (trigger medicos_avisar → función aviso-estado) cuando el registro pasa a revisión.
 
   btnSiguiente.addEventListener('click', async function () {
     if (!validarPaso(actual)) return;
@@ -383,7 +375,6 @@
       if (actual < total) { mostrarPaso(actual + 1); }
       else {
         var nuevo = res.antes !== res.despues && res.despues === 'en_revision';
-        avisarEquipo(nuevo ? 'Nuevo registro' : 'Actualización de datos');
         if (!nuevo) {
           document.getElementById('final-titulo').textContent = 'Cambios guardados';
           document.getElementById('final-texto').textContent = 'Sus datos quedaron actualizados. Si cambian sus horarios o servicios, los ajustamos en su asistente.';

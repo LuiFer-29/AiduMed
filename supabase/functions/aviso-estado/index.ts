@@ -13,8 +13,10 @@ const transporte = nodemailer.createTransport({
 const esc = (t: unknown) =>
   String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 
-type Medico = { correo?: string; titulo?: string; nombre?: string; estado?: string; nota_admin?: string };
-type Mensaje = { asunto: string; titulo: string; parrafos: string[]; nota?: string; despues?: string; boton: string };
+type Medico = { correo?: string; titulo?: string; nombre?: string; estado?: string; nota_admin?: string; especialidad?: string; especialidad_otra?: string; consultorio?: string; plan?: string; whatsapp_consultorio?: string };
+type Mensaje = { asunto: string; titulo: string; parrafos: string[]; nota?: string; despues?: string; boton: string; url?: string };
+
+const EQUIPO = "suscripciones@aidu.pro";
 
 function saludo(m: Medico) {
   const t = m.titulo || "";
@@ -82,7 +84,7 @@ function html(m: Mensaje) {
       <h1 style="margin:0 0 16px;font-size:22px;line-height:1.25;color:#10211F;">${esc(m.titulo)}</h1>
       ${ps}${nota}${despues}
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:8px;"><tr><td style="background:#0B6E5F;border-radius:10px;">
-        <a href="https://aidumed.app/mi-perfil" style="display:inline-block;padding:13px 26px;font-size:15px;font-weight:bold;color:#FFFFFF;text-decoration:none;">${esc(m.boton)}</a>
+        <a href="${m.url || "https://aidumed.app/mi-perfil"}" style="display:inline-block;padding:13px 26px;font-size:15px;font-weight:bold;color:#FFFFFF;text-decoration:none;">${esc(m.boton)}</a>
       </td></tr></table>
     </td></tr>
     <tr><td style="padding:22px 28px 26px;">
@@ -93,7 +95,7 @@ function html(m: Mensaje) {
 }
 
 function texto(m: Mensaje) {
-  return [m.titulo, "", ...m.parrafos, m.nota ? `\n${m.nota}\n` : "", m.despues || "", "", "https://aidumed.app/mi-perfil", "", "Aidú Med · San Pedro Sula, Honduras"].join("\n");
+  return [m.titulo, "", ...m.parrafos, m.nota ? `\n${m.nota}\n` : "", m.despues || "", "", m.url || "https://aidumed.app/mi-perfil", "", "Aidú Med · San Pedro Sula, Honduras"].join("\n");
 }
 
 Deno.serve(async (req) => {
@@ -103,6 +105,26 @@ Deno.serve(async (req) => {
   const { record, old_record } = await req.json();
   const medico = record as Medico;
   if (!medico?.correo || medico.estado === old_record?.estado) return new Response("Sin cambios");
+  // Registro enviado (o reenviado): aviso al equipo para revisarlo.
+  if (medico.estado === "en_revision") {
+    const nombre = [medico.titulo, medico.nombre].filter(Boolean).join(" ") || medico.correo;
+    const m: Mensaje = {
+      asunto: `Nuevo registro por revisar: ${nombre}`,
+      titulo: "Hay un registro por revisar",
+      parrafos: [
+        `${nombre} · ${medico.especialidad === "Otra" ? medico.especialidad_otra || "Otra" : medico.especialidad || "Sin especialidad"}`,
+        `Consultorio: ${medico.consultorio || "—"}`,
+        `Plan: ${medico.plan || "Sin elegir"} · WhatsApp: ${medico.whatsapp_consultorio || "—"}`,
+        `Correo: ${medico.correo}`,
+        old_record?.estado === "rechazado" ? "Lo reenvió después de que usted le pidió cambios." : "Es un registro nuevo.",
+      ],
+      boton: "Revisar en el panel",
+      url: "https://aidumed.app/admin",
+    };
+    await transporte.sendMail({ from: `"Aidú Med" <${EQUIPO}>`, to: EQUIPO, replyTo: medico.correo, subject: m.asunto, html: html(m), text: texto(m) });
+    console.log(`Aviso al equipo: ${medico.correo} en revisión`);
+    return new Response("Enviado: equipo");
+  }
   const crear = mensajes[medico.estado || ""];
   if (!crear) return new Response("Este estado no lleva aviso");
   const m = crear(medico);
