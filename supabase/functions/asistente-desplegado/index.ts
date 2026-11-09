@@ -90,7 +90,8 @@ function crearAvisos(prueba) {
   async function enviar2(para, asunto, cuerpo, texto2) {
     if (!para) return;
     try {
-      await transporte.sendMail({ from: '"Aid\xFA Med" <hola@aidu.pro>', to: para, subject: prefijo + asunto, html: cuerpo, text: texto2 });
+      const r = await transporte.sendMail({ from: '"Aid\xFA Med" <hola@aidu.pro>', to: para, subject: prefijo + asunto, html: cuerpo, text: texto2 });
+      console.log(`Correo enviado: "${prefijo + asunto}" \u2192 ${para} (${r.response || r.messageId})`);
     } catch (e) {
       console.error("Correo", e);
     }

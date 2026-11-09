@@ -36,7 +36,8 @@ export function crearAvisos(prueba: boolean): Avisos {
   async function enviar(para: string | null | undefined, asunto: string, cuerpo: string, texto: string) {
     if (!para) return;
     try {
-      await transporte.sendMail({ from: '"Aidú Med" <hola@aidu.pro>', to: para, subject: prefijo + asunto, html: cuerpo, text: texto });
+      const r = await transporte.sendMail({ from: '"Aidú Med" <hola@aidu.pro>', to: para, subject: prefijo + asunto, html: cuerpo, text: texto });
+      console.log(`Correo enviado: "${prefijo + asunto}" → ${para} (${r.response || r.messageId})`);
     } catch (e) {
       console.error("Correo", e);
     }
