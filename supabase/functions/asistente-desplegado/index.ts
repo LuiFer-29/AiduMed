@@ -315,6 +315,10 @@ var lempiras = (p) => {
   return n ? `L ${n.toLocaleString("en-US")}` : "";
 };
 var limpiarNombre = (t) => t.replace(/[^\p{L}\s'.-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 60).split(" ").map((p) => p ? p[0].toUpperCase() + p.slice(1).toLowerCase() : p).join(" ");
+function medicoEnTexto(texto2) {
+  const m = texto2.match(/cita con (?:el |la )?(?:dra?|doctora?)\.?\s+([\p{L}][\p{L} .'-]{2,60}?)[\s.!¡]*$/iu);
+  return m ? m[1].trim() : null;
+}
 function codigoEnTexto(texto2) {
   const m = texto2.match(/c[oó]digo[:\s#]*([a-z]{2}\d{2})\b/i) || texto2.match(/^\s*([a-z]{2}\d{2})\s*$/i);
   return m ? m[1].toUpperCase() : null;
@@ -345,10 +349,18 @@ async function atender(e, d) {
   let salidas;
   const codigo = e.texto ? codigoEnTexto(e.texto) : null;
   const porCodigo = codigo ? await almacen2.medicoPorCodigo(codigo) : null;
+  const nombre = !porCodigo && e.texto ? medicoEnTexto(e.texto) : null;
+  const porNombre = nombre ? (await almacen2.buscarMedicos(nombre)).filter((m) => disponible(m, d)) : [];
+  const exactos = porNombre.filter((m) => sinAcentos2((m.nombre || "").toLowerCase()) === sinAcentos2(nombre.toLowerCase()));
   if (porCodigo && disponible(porCodigo, d)) {
     s.medico = porCodigo;
     s.conv.medico_id = porCodigo.id;
     salidas = await s.saludo();
+  } else if (exactos.length === 1 || porNombre.length === 1) {
+    s.medico = exactos.length === 1 ? exactos[0] : porNombre[0];
+    salidas = await s.saludo();
+  } else if (porNombre.length > 1) {
+    salidas = await s.buscarMedico(nombre);
   } else if (e.id) {
     salidas = await s.porBoton(e.id);
   } else {
@@ -622,17 +634,17 @@ var Sesion = class {
       pre.push({ tipo: "texto", texto: `El ${fechaLarga(fechaPedida).toLowerCase()} ${motivo}. Estos son los pr\xF3ximos d\xEDas con espacio:` });
       desde = fechaPedida > fechaLocal(this.d.ahora) ? fechaPedida : void 0;
     }
-    const dias = diasDisponibles(m, dur, ocupado, feriados, this.d.ahora, desde, 10);
+    const dias = diasDisponibles(m, dur, ocupado, feriados, this.d.ahora, desde, 8);
     if (!dias.length) {
       this.ir("menu");
       return [...pre, { tipo: "texto", texto: "Por ahora no hay horarios disponibles en las pr\xF3ximas semanas. \u{1F615}" }, ...this.contacto()];
     }
-    const filas = dias.slice(0, 9).map((x) => ({
+    const filas = dias.slice(0, 7).map((x) => ({
       id: `dia:${x.fecha}`,
       titulo: corto(fechaLarga(x.fecha).replace(/ de (\w{3})\w*$/, " de $1"), 24),
       descripcion: `${x.libres.length} ${x.libres.length === 1 ? "horario" : "horarios"} \xB7 desde ${hora12(x.libres[0])}`
     }));
-    if (dias.length > 9) filas.push({ id: `dia:mas:${sumarDias(dias[8].fecha, 1)}`, titulo: "Ver m\xE1s fechas", descripcion: "D\xEDas siguientes" });
+    if (dias.length > 7) filas.push({ id: `dia:mas:${sumarDias(dias[6].fecha, 1)}`, titulo: "Ver m\xE1s fechas", descripcion: "Siguientes d\xEDas con espacio" });
     this.ir("dia");
     return [...pre, {
       tipo: "lista",
@@ -872,7 +884,7 @@ Te enviar\xE9 un recordatorio un d\xEDa antes. Si necesitas cambiarla o cancelar
     const lugar = [m.consultorio, m.direccion].filter(Boolean).join(", ");
     return [{
       tipo: "texto",
-      texto: `\xA1Gracias por confirmar! \u{1F64C} Te esperamos el *${fechaLarga(fechaLocal(i)).toLowerCase()} a las ${hora12(i)}*.${lugar ? `
+      texto: `\xA1Gracias por confirmar! \u{1F64C} Te esperamos el *${fechaLarga(fechaLocal(i)).toLowerCase()} a las ${hora12(i)}*${lugar ? `
 
 \u{1F4CD} ${lugar}` : ""}${m.ubicacion_gps ? `
 \u{1F5FA}\uFE0F ${m.ubicacion_gps}` : ""}`

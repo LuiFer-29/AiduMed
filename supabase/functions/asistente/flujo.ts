@@ -80,6 +80,12 @@ const limpiarNombre = (t: string) =>
   t.replace(/[^\p{L}\s'.-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 60)
     .split(" ").map((p) => (p ? p[0].toUpperCase() + p.slice(1).toLowerCase() : p)).join(" ");
 
+/** "Hola, quiero agendar una cita con el Dr. Luis Espinoza" → "Luis Espinoza" (mensaje del enlace del médico). */
+export function medicoEnTexto(texto: string): string | null {
+  const m = texto.match(/cita con (?:el |la )?(?:dra?|doctora?)\.?\s+([\p{L}][\p{L} .'-]{2,60}?)[\s.!¡]*$/iu);
+  return m ? m[1].trim() : null;
+}
+
 export function codigoEnTexto(texto: string): string | null {
   const m = texto.match(/c[oó]digo[:\s#]*([a-z]{2}\d{2})\b/i) || texto.match(/^\s*([a-z]{2}\d{2})\s*$/i);
   return m ? m[1].toUpperCase() : null;
@@ -119,10 +125,18 @@ export async function atender(e: Entrada, d: Dependencias): Promise<Salida[]> {
 
   const codigo = e.texto ? codigoEnTexto(e.texto) : null;
   const porCodigo = codigo ? await almacen.medicoPorCodigo(codigo) : null;
+  const nombre = !porCodigo && e.texto ? medicoEnTexto(e.texto) : null;
+  const porNombre = nombre ? (await almacen.buscarMedicos(nombre)).filter((m) => disponible(m, d)) : [];
+  const exactos = porNombre.filter((m) => sinAcentos((m.nombre || "").toLowerCase()) === sinAcentos(nombre!.toLowerCase()));
   if (porCodigo && disponible(porCodigo, d)) {
     s.medico = porCodigo;
     s.conv.medico_id = porCodigo.id;
     salidas = await s.saludo();
+  } else if (exactos.length === 1 || porNombre.length === 1) {
+    s.medico = exactos.length === 1 ? exactos[0] : porNombre[0];
+    salidas = await s.saludo();
+  } else if (porNombre.length > 1) {
+    salidas = await s.buscarMedico(nombre!);
   } else if (e.id) {
     salidas = await s.porBoton(e.id);
   } else {
@@ -399,17 +413,17 @@ class Sesion {
       desde = fechaPedida > fechaLocal(this.d.ahora) ? fechaPedida : undefined;
     }
 
-    const dias = diasDisponibles(m, dur, ocupado, feriados, this.d.ahora, desde, 10);
+    const dias = diasDisponibles(m, dur, ocupado, feriados, this.d.ahora, desde, 8);
     if (!dias.length) {
       this.ir("menu");
       return [...pre, { tipo: "texto", texto: "Por ahora no hay horarios disponibles en las próximas semanas. 😕" }, ...this.contacto()];
     }
-    const filas: Fila[] = dias.slice(0, 9).map((x) => ({
+    const filas: Fila[] = dias.slice(0, 7).map((x) => ({
       id: `dia:${x.fecha}`,
       titulo: corto(fechaLarga(x.fecha).replace(/ de (\w{3})\w*$/, " de $1"), 24),
       descripcion: `${x.libres.length} ${x.libres.length === 1 ? "horario" : "horarios"} · desde ${hora12(x.libres[0])}`,
     }));
-    if (dias.length > 9) filas.push({ id: `dia:mas:${sumarDias(dias[8].fecha, 1)}`, titulo: "Ver más fechas", descripcion: "Días siguientes" });
+    if (dias.length > 7) filas.push({ id: `dia:mas:${sumarDias(dias[6].fecha, 1)}`, titulo: "Ver más fechas", descripcion: "Siguientes días con espacio" });
     this.ir("dia");
     return [...pre, {
       tipo: "lista", texto: `*${serv.nombre}*${serv.duracion ? ` (${serv.duracion})` : ""}\n¿Qué día te queda mejor?`,

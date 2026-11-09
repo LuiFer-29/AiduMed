@@ -123,7 +123,8 @@
   });
   $('empezar').addEventListener('click', function () {
     var cod = $('medico').value;
-    if (cod) enviar({ texto: 'Hola, quiero una cita (código ' + cod + ')' });
+    var m = medicos.find(function (x) { return x.codigo === cod; });
+    if (m) enviar({ texto: decodeURIComponent(App.enlacePacientes(m).split('?text=')[1]) });
   });
   $('reiniciar').addEventListener('click', async function () {
     if (ocupado) return;

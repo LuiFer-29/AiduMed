@@ -102,7 +102,7 @@
 
   // ---------- Enlace y QR para pacientes ----------
   if (p.codigo && (p.estado === 'aprobado' || p.estado === 'activo' || p.estado === 'pausado')) {
-    var enlace = App.enlacePacientes(p.codigo);
+    var enlace = App.enlacePacientes(p);
     $('caja-enlace').hidden = false;
     $('codigo').textContent = p.codigo;
     $('enlace').value = enlace;

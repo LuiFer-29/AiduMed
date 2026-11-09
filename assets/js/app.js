@@ -89,8 +89,9 @@ window.AIDU_SB = {
 
     // Número del asistente (compartido) y enlace que el médico comparte con sus pacientes.
     asistente: '50492980013',
-    enlacePacientes: function (codigo) {
-      return 'https://wa.me/' + this.asistente + '?text=' + encodeURIComponent('Hola, quiero una cita (código ' + codigo + ')');
+    enlacePacientes: function (m) {
+      var tratamiento = m.titulo === 'Dra.' ? 'la Dra.' : 'el Dr.';
+      return 'https://wa.me/' + this.asistente + '?text=' + encodeURIComponent('Hola, quiero agendar una cita con ' + tratamiento + ' ' + (m.nombre || '').trim());
     },
 
     escapar: function (t) {
