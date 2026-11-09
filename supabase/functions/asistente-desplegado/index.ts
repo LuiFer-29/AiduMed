@@ -1137,7 +1137,7 @@ function canceladaPorConsultorio(para, c, m) {
 }
 
 // whatsapp.ts
-var VERSION = Deno.env.get("WA_API_VERSION") || "v23.0";
+var VERSION = Deno.env.get("WA_API_VERSION") || "v25.0";
 function cargaUtil(para, s) {
   const base = { messaging_product: "whatsapp", recipient_type: "individual", to: para };
   if (s.tipo === "texto") return { ...base, type: "text", text: { body: corto(s.texto, 4096), preview_url: true } };

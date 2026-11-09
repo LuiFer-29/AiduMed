@@ -1,7 +1,7 @@
 // Aidú Med · Envío y recepción de mensajes con la API de WhatsApp Cloud (Meta).
 import { corto, type Entrada, type Salida } from "./flujo.ts";
 
-const VERSION = Deno.env.get("WA_API_VERSION") || "v23.0";
+const VERSION = Deno.env.get("WA_API_VERSION") || "v25.0";
 
 export function cargaUtil(para: string, s: Salida): Record<string, unknown> {
   const base = { messaging_product: "whatsapp", recipient_type: "individual", to: para };
