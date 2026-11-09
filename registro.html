@@ -14,10 +14,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=4">
 <link rel="stylesheet" href="/assets/css/registro.css?v=8">
-<link rel="stylesheet" href="/assets/css/app.css?v=11">
+<link rel="stylesheet" href="/assets/css/app.css?v=12">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
 <script src="/assets/js/app.js?v=11" defer></script>
-<script src="/assets/js/registro.js?v=10" defer></script>
+<script src="/assets/js/registro.js?v=12" defer></script>
 </head>
 <body class="registro">
 
@@ -188,6 +188,13 @@
           <label class="campo">Hasta<input type="time" name="hora_hasta" value="17:00" required></label>
         </div>
         <span class="error" id="error-horas">La hora final debe ser después de la inicial.</span>
+
+        <label class="casilla-linea"><input type="checkbox" id="tiene-almuerzo"><span>Cierro para almorzar</span></label>
+        <div class="dos-columnas" id="campos-almuerzo" hidden>
+          <label class="campo">Almuerzo desde<input type="time" name="almuerzo_desde" value="12:00"></label>
+          <label class="campo">Hasta<input type="time" name="almuerzo_hasta" value="13:00"></label>
+        </div>
+        <span class="error" id="error-almuerzo">El almuerzo debe quedar dentro de su horario y terminar después de empezar.</span>
 
         <label class="campo">Tiempo entre citas
           <select name="tiempo_entre_citas"><option>Sin pausa</option><option>10 min</option><option>15 min</option></select>

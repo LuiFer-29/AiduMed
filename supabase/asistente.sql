@@ -10,12 +10,11 @@ alter table public.medicos add column if not exists codigo text unique;
 create or replace function public.generar_codigo(nombre text) returns text
 language plpgsql as $$
 declare
-  ini text := upper(left(regexp_replace(coalesce(nombre, 'AM'), '[^A-Za-zÁÉÍÓÚÑáéíóúñ ]', '', 'g'), 1)
-           || coalesce(left(split_part(trim(nombre), ' ', 2), 1), 'M'));
+  limpio text := trim(regexp_replace(translate(upper(coalesce(nombre, '')), 'ÁÉÍÓÚÜÑ', 'AEIOUUN'), '[^A-Z ]', ' ', 'g'));
+  ini text := left(split_part(limpio, ' ', 1), 1) || left(split_part(regexp_replace(limpio, '\s+', ' ', 'g'), ' ', 2), 1);
   cand text;
 begin
-  ini := translate(ini, 'ÁÉÍÓÚÑ', 'AEIOUN');
-  if length(ini) < 2 then ini := rpad(ini, 2, 'M'); end if;
+  if length(ini) < 2 then ini := rpad(coalesce(nullif(ini, ''), 'A'), 2, 'M'); end if;
   loop
     cand := ini || lpad((floor(random() * 90) + 10)::text, 2, '0');
     exit when not exists (select 1 from public.medicos where codigo = cand);

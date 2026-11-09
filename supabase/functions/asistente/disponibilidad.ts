@@ -11,6 +11,8 @@ export type Perfil = {
   anticipacion?: string | null;
   vacaciones?: string[] | null;
   otras_vacaciones?: Rango[] | null;
+  almuerzo_desde?: string | null;
+  almuerzo_hasta?: string | null;
 };
 export type Ocupado = { inicio: string | Date; fin: string | Date };
 
@@ -69,13 +71,16 @@ export function horariosDelDia(
   const abre = instante(fecha, p.hora_desde), cierra = instante(fecha, p.hora_hasta);
   const minimo = ahora.getTime() + AVISO_MINIMO_MIN * 60_000;
   const citas = ocupado.map((o) => ({ i: new Date(o.inicio).getTime(), f: new Date(o.fin).getTime() }));
+  const almuerzo = p.almuerzo_desde && p.almuerzo_hasta
+    ? { i: instante(fecha, p.almuerzo_desde).getTime(), f: instante(fecha, p.almuerzo_hasta).getTime() } : null;
   const libres: Date[] = [];
   for (let t = abre.getTime(); t + duracion * 60_000 <= cierra.getTime(); t += paso * 60_000) {
     if (t < minimo) continue;
     const fin = t + duracion * 60_000;
     // Respeta la pausa entre citas antes y después.
     const choca = citas.some((c) => c.i < fin + pausa * 60_000 && c.f + pausa * 60_000 > t);
-    if (!choca) libres.push(new Date(t));
+    const comiendo = almuerzo && almuerzo.i < fin && almuerzo.f > t;
+    if (!choca && !comiendo) libres.push(new Date(t));
   }
   return libres;
 }

@@ -101,6 +101,14 @@
       var horasOk = desde && hasta && hasta > desde;
       document.getElementById('error-horas').classList.toggle('visible', !horasOk);
       if (!horasOk) { ok = false; primero = primero || form.elements.hora_hasta; }
+      if (document.getElementById('tiene-almuerzo').checked) {
+        var ad = form.elements.almuerzo_desde.value, ah = form.elements.almuerzo_hasta.value;
+        var almOk = ad && ah && ah > ad && ad >= desde && ah <= hasta;
+        document.getElementById('error-almuerzo').classList.toggle('visible', !almOk);
+        if (!almOk) { ok = false; primero = primero || form.elements.almuerzo_desde; }
+      } else {
+        document.getElementById('error-almuerzo').classList.remove('visible');
+      }
       listaFechas.querySelectorAll('.fecha-fila').forEach(function (fila) {
         var d = fila.querySelector('.f-desde').value, h = fila.querySelector('.f-hasta').value;
         var vacia = !d && !h && !fila.querySelector('.f-motivo').value.trim();
@@ -224,6 +232,11 @@
     agregarFecha().querySelector('.f-desde').focus();
   });
 
+  document.getElementById('tiene-almuerzo').addEventListener('change', function () {
+    document.getElementById('campos-almuerzo').hidden = !this.checked;
+    document.getElementById('error-almuerzo').classList.remove('visible');
+  });
+
   // ---------- Paso 5 ----------
   form.querySelectorAll('input[name="plan"]').forEach(function (r) {
     r.addEventListener('change', function () { errorDe('plan').classList.remove('visible'); });
@@ -257,6 +270,12 @@
     if (p.dias_atencion && p.dias_atencion.length) document.querySelectorAll('.dia').forEach(function (d) { d.setAttribute('aria-pressed', p.dias_atencion.indexOf(d.dataset.dia) >= 0); });
     if (p.hora_desde) f.hora_desde.value = hhmm(p.hora_desde);
     if (p.hora_hasta) f.hora_hasta.value = hhmm(p.hora_hasta);
+    if (p.almuerzo_desde && p.almuerzo_hasta) {
+      document.getElementById('tiene-almuerzo').checked = true;
+      document.getElementById('campos-almuerzo').hidden = false;
+      f.almuerzo_desde.value = hhmm(p.almuerzo_desde);
+      f.almuerzo_hasta.value = hhmm(p.almuerzo_hasta);
+    }
     if (p.tiempo_entre_citas) f.tiempo_entre_citas.value = p.tiempo_entre_citas;
     if (p.anticipacion) f.anticipacion.value = p.anticipacion;
     if (p.enviado_at || (p.vacaciones && p.vacaciones.length)) document.querySelectorAll('.tarjeta-opcion').forEach(function (d) { d.setAttribute('aria-pressed', (p.vacaciones || []).indexOf(d.dataset.vacacion) >= 0); });
@@ -327,6 +346,8 @@
     return {
       dias_atencion: Array.prototype.map.call(document.querySelectorAll('.dia[aria-pressed="true"]'), function (d) { return d.dataset.dia; }),
       hora_desde: f.hora_desde.value, hora_hasta: f.hora_hasta.value,
+      almuerzo_desde: document.getElementById('tiene-almuerzo').checked ? f.almuerzo_desde.value : null,
+      almuerzo_hasta: document.getElementById('tiene-almuerzo').checked ? f.almuerzo_hasta.value : null,
       tiempo_entre_citas: f.tiempo_entre_citas.value, anticipacion: f.anticipacion.value,
       vacaciones: Array.prototype.map.call(document.querySelectorAll('.tarjeta-opcion[aria-pressed="true"]'), function (d) { return d.dataset.vacacion; }),
       otras_vacaciones: Array.prototype.map.call(listaFechas.querySelectorAll('.fecha-fila'), function (fila) {

@@ -74,6 +74,9 @@ export function crearAlmacen(sb: SupabaseClient): Almacen & {
     async cancelarCita(id, por) {
       falla(await sb.from("citas").update({ estado: "cancelada", cancelada_por: por, actualizada_at: new Date().toISOString() }).eq("id", id));
     },
+    async confirmarAsistencia(id) {
+      falla(await sb.from("citas").update({ paciente_confirmo_at: new Date().toISOString(), actualizada_at: new Date().toISOString() }).eq("id", id));
+    },
     async feriados() {
       const r = await sb.from("feriados").select("nombre, desde, hasta");
       falla(r);

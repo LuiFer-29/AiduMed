@@ -11,10 +11,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=4">
-<link rel="stylesheet" href="/assets/css/app.css?v=11">
+<link rel="stylesheet" href="/assets/css/app.css?v=12">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
 <script src="/assets/js/app.js?v=11" defer></script>
-<script src="/assets/js/mi-perfil.js?v=9" defer></script>
+<script src="/assets/vendor/qrcode-1.4.4.min.js" defer></script>
+<script src="/assets/js/mi-perfil.js?v=12" defer></script>
 </head>
 <body class="app">
 <header class="barra-app">
@@ -44,6 +45,34 @@
     <div class="nota-admin" id="nota-admin" hidden></div>
 
     <div class="tarjetas-perfil">
+      <section class="caja tarjeta-ancha" id="caja-citas">
+        <div class="caja-titulo">
+          <h2>Mis citas</h2>
+          <div class="pestanas-mini" role="tablist" aria-label="Citas">
+            <button type="button" role="tab" aria-selected="true" data-vista="proximas">Próximas</button>
+            <button type="button" role="tab" aria-selected="false" data-vista="anteriores">Anteriores</button>
+          </div>
+        </div>
+        <p class="resumen-citas" id="resumen-citas"></p>
+        <div id="lista-citas" class="lista-citas"><p class="ayuda">Cargando citas…</p></div>
+      </section>
+
+      <section class="caja tarjeta-ancha enlace-pacientes" id="caja-enlace" hidden>
+        <div class="enlace-texto">
+          <h2>Su enlace para pacientes</h2>
+          <p class="ayuda" id="enlace-ayuda">Compártalo en su WhatsApp, redes sociales o tarjetas. Quien lo abra llega directo a su asistente de citas.</p>
+          <div class="codigo-grande"><span>Su código</span><strong id="codigo"></strong></div>
+          <div class="copiar-fila">
+            <input type="text" id="enlace" readonly aria-label="Enlace para pacientes">
+            <button type="button" class="boton boton-primario boton-chico" id="copiar">Copiar</button>
+          </div>
+        </div>
+        <div class="enlace-qr">
+          <canvas id="qr" width="220" height="220" aria-label="Código QR del enlace"></canvas>
+          <button type="button" class="boton boton-secundario boton-chico" id="descargar-qr">Descargar QR</button>
+        </div>
+      </section>
+
       <section class="caja tarjeta-ancha">
         <div class="caja-titulo"><h2>Servicios y precios</h2><a class="editar-enlace" href="/registro?paso=3">Editar</a></div>
         <ul class="lista-servicios-perfil" id="servicios"></ul>
@@ -78,10 +107,6 @@
         <div class="plan-perfil" id="plan"></div>
       </section>
 
-      <section class="caja caja-pronto">
-        <div class="caja-titulo"><h2>Mis citas</h2><span class="etiqueta-pronto">Próximamente</span></div>
-        <p class="ayuda">Muy pronto verá aquí sus próximas citas y su historial, y podrá reagendar o cancelar desde su perfil.</p>
-      </section>
     </div>
   </div>
 </main>

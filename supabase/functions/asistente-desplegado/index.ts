@@ -87,10 +87,10 @@ function html(titulo, filas, nota) {
 }
 function crearAvisos(prueba) {
   const prefijo = prueba ? "[Prueba] " : "";
-  async function enviar2(para, asunto, cuerpo, texto) {
+  async function enviar2(para, asunto, cuerpo, texto2) {
     if (!para) return;
     try {
-      await transporte.sendMail({ from: '"Aid\xFA Med" <hola@aidu.pro>', to: para, subject: prefijo + asunto, html: cuerpo, text: texto });
+      await transporte.sendMail({ from: '"Aid\xFA Med" <hola@aidu.pro>', to: para, subject: prefijo + asunto, html: cuerpo, text: texto2 });
     } catch (e) {
       console.error("Correo", e);
     }
@@ -161,10 +161,10 @@ function crearAlmacen(sb2) {
       falla(r);
       return r.data;
     },
-    async buscarMedicos(texto) {
+    async buscarMedicos(texto2) {
       const r = await sb2.from("medicos").select("*").in("estado", ["activo", "aprobado"]);
       falla(r);
-      const palabras = sinAcentos(texto).replace(/\b(dr|dra|doctor|doctora|el|la|de|del|con)\b\.?/g, " ").split(/\s+/).filter((p) => p.length >= 3);
+      const palabras = sinAcentos(texto2).replace(/\b(dr|dra|doctor|doctora|el|la|de|del|con)\b\.?/g, " ").split(/\s+/).filter((p) => p.length >= 3);
       if (!palabras.length) return [];
       return r.data.filter((m) => {
         const t = sinAcentos(`${m.nombre || ""} ${m.consultorio || ""}`);
@@ -205,6 +205,9 @@ function crearAlmacen(sb2) {
     async cancelarCita(id, por) {
       falla(await sb2.from("citas").update({ estado: "cancelada", cancelada_por: por, actualizada_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", id));
     },
+    async confirmarAsistencia(id) {
+      falla(await sb2.from("citas").update({ paciente_confirmo_at: (/* @__PURE__ */ new Date()).toISOString(), actualizada_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", id));
+    },
     async feriados() {
       const r = await sb2.from("feriados").select("nombre, desde, hasta");
       falla(r);
@@ -226,17 +229,17 @@ function crearAlmacen(sb2) {
 // disponibilidad.ts
 var DIAS2 = ["Domingo", "Lunes", "Martes", "Mi\xE9rcoles", "Jueves", "Viernes", "S\xE1bado"];
 var AVISO_MINIMO_MIN = 60;
-function minutos(texto) {
-  if (!texto) return 0;
-  const n = parseInt(String(texto).replace(/\D/g, ""), 10);
+function minutos(texto2) {
+  if (!texto2) return 0;
+  const n = parseInt(String(texto2).replace(/\D/g, ""), 10);
   if (isNaN(n)) return 0;
-  return /h/i.test(texto) && !/min/i.test(texto) ? n * 60 : n;
+  return /h/i.test(texto2) && !/min/i.test(texto2) ? n * 60 : n;
 }
-function diasDeAnticipacion(texto) {
-  if (!texto) return 30;
-  const n = parseInt(texto, 10) || 1;
-  if (/semana/i.test(texto)) return n * 7;
-  if (/mes/i.test(texto)) return n * 30;
+function diasDeAnticipacion(texto2) {
+  if (!texto2) return 30;
+  const n = parseInt(texto2, 10) || 1;
+  if (/semana/i.test(texto2)) return n * 7;
+  if (/mes/i.test(texto2)) return n * 30;
   return 30;
 }
 function rangosLibres(p, feriados, anio) {
@@ -270,12 +273,14 @@ function horariosDelDia(p, fecha, duracion, ocupado, rangos, ahora) {
   const abre = instante(fecha, p.hora_desde), cierra = instante(fecha, p.hora_hasta);
   const minimo = ahora.getTime() + AVISO_MINIMO_MIN * 6e4;
   const citas = ocupado.map((o) => ({ i: new Date(o.inicio).getTime(), f: new Date(o.fin).getTime() }));
+  const almuerzo = p.almuerzo_desde && p.almuerzo_hasta ? { i: instante(fecha, p.almuerzo_desde).getTime(), f: instante(fecha, p.almuerzo_hasta).getTime() } : null;
   const libres = [];
   for (let t = abre.getTime(); t + duracion * 6e4 <= cierra.getTime(); t += paso * 6e4) {
     if (t < minimo) continue;
     const fin = t + duracion * 6e4;
     const choca = citas.some((c) => c.i < fin + pausa * 6e4 && c.f + pausa * 6e4 > t);
-    if (!choca) libres.push(new Date(t));
+    const comiendo = almuerzo && almuerzo.i < fin && almuerzo.f > t;
+    if (!choca && !comiendo) libres.push(new Date(t));
   }
   return libres;
 }
@@ -310,12 +315,12 @@ var lempiras = (p) => {
   return n ? `L ${n.toLocaleString("en-US")}` : "";
 };
 var limpiarNombre = (t) => t.replace(/[^\p{L}\s'.-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 60).split(" ").map((p) => p ? p[0].toUpperCase() + p.slice(1).toLowerCase() : p).join(" ");
-function codigoEnTexto(texto) {
-  const m = texto.match(/c[oó]digo[:\s#]*([a-z]{2}\d{2})\b/i) || texto.match(/^\s*([a-z]{2}\d{2})\s*$/i);
+function codigoEnTexto(texto2) {
+  const m = texto2.match(/c[oó]digo[:\s#]*([a-z]{2}\d{2})\b/i) || texto2.match(/^\s*([a-z]{2}\d{2})\s*$/i);
   return m ? m[1].toUpperCase() : null;
 }
-function interpretarSinIA(texto) {
-  const t = sinAcentos2(texto.toLowerCase());
+function interpretarSinIA(texto2) {
+  const t = sinAcentos2(texto2.toLowerCase());
   if (/\b(soy (medico|doctor|doctora|dr|dra)|para mi consultorio|mi clinica)\b/.test(t)) return { intencion: "soy_medico" };
   if (/cancel/.test(t)) return { intencion: "cancelar" };
   if (/(reagend|cambiar (la|mi) cita|mover (la|mi) cita)/.test(t)) return { intencion: "reagendar" };
@@ -371,9 +376,9 @@ var Sesion = class {
     if (datos) this.conv.datos = datos;
   }
   // ----- Inicio, sin médico elegido -----
-  inicio(texto = "\xA1Hola! \u{1F44B} Soy el asistente de citas de *Aid\xFA Med*. \xBFEres paciente o m\xE9dico?") {
+  inicio(texto2 = "\xA1Hola! \u{1F44B} Soy el asistente de citas de *Aid\xFA Med*. \xBFEres paciente o m\xE9dico?") {
     this.ir("inicio", {});
-    return [{ tipo: "botones", texto, botones: [{ id: "ini:paciente", titulo: "Soy paciente" }, { id: "ini:medico", titulo: "Soy m\xE9dico" }] }];
+    return [{ tipo: "botones", texto: texto2, botones: [{ id: "ini:paciente", titulo: "Soy paciente" }, { id: "ini:medico", titulo: "Soy m\xE9dico" }] }];
   }
   async saludo() {
     const m = this.medico;
@@ -389,9 +394,9 @@ var Sesion = class {
       botones: BOTONES_MENU
     }];
   }
-  menu(texto = "\xBFEn qu\xE9 m\xE1s te ayudo?") {
+  menu(texto2 = "\xBFEn qu\xE9 m\xE1s te ayudo?") {
     this.ir("menu", {});
-    return [{ tipo: "botones", texto, botones: BOTONES_MENU }];
+    return [{ tipo: "botones", texto: texto2, botones: BOTONES_MENU }];
   }
   // ----- Respuestas a botones y listas -----
   async porBoton(id) {
@@ -406,6 +411,13 @@ var Sesion = class {
       if (!m || !disponible(m, this.d)) return this.inicio("Ese m\xE9dico ya no est\xE1 disponible. \xBFEres paciente o m\xE9dico?");
       this.medico = m;
       return this.saludo();
+    }
+    if (k === "rec") return this.respuestaRecordatorio(v, w);
+    if (k === "agenda") {
+      const m = await this.d.almacen.medicoPorId(v);
+      if (!m || !disponible(m, this.d)) return this.inicio();
+      this.medico = m;
+      return this.iniciarAgenda();
     }
     if (!this.medico) return this.inicio();
     switch (k) {
@@ -457,27 +469,27 @@ var Sesion = class {
     return this.menu();
   }
   // ----- Texto libre -----
-  async porTexto(texto) {
+  async porTexto(texto2) {
     const paso = this.conv.paso;
-    if (!texto) return this.medico ? this.repetir() : this.inicio();
-    if (/^(menu|menú|inicio|volver|empezar)\W*$/i.test(texto)) return this.medico ? this.menu("\xBFEn qu\xE9 te ayudo?") : this.inicio();
-    if (paso === "elegir_medico") return this.buscarMedico(texto);
-    if (paso === "prospecto") return this.guardarProspecto(texto);
+    if (!texto2) return this.medico ? this.repetir() : this.inicio();
+    if (/^(menu|menú|inicio|volver|empezar)\W*$/i.test(texto2)) return this.medico ? this.menu("\xBFEn qu\xE9 te ayudo?") : this.inicio();
+    if (paso === "elegir_medico") return this.buscarMedico(texto2);
+    if (paso === "prospecto") return this.guardarProspecto(texto2);
     if (paso === "nombre" && this.medico) {
-      const n = limpiarNombre(texto);
+      const n = limpiarNombre(texto2);
       if (n.length < 3) return [{ tipo: "texto", texto: "\xBFMe escribes el nombre completo, por favor? (nombre y apellido)" }];
       this.datos.nombre = n;
       return this.confirmar();
     }
-    const afirma = /^(s[ií]|si,|claro|confirm|ok|dale|listo|correcto|de acuerdo)/i.test(sinAcentos2(texto.toLowerCase()));
-    const niega = /^(no\b|nel|mejor no)/i.test(sinAcentos2(texto.toLowerCase()));
+    const afirma = /^(s[ií]|si,|claro|confirm|ok|dale|listo|correcto|de acuerdo)/i.test(sinAcentos2(texto2.toLowerCase()));
+    const niega = /^(no\b|nel|mejor no)/i.test(sinAcentos2(texto2.toLowerCase()));
     if (this.medico && paso === "quien") {
       if (afirma) {
         this.datos.nombre = this.datos.nombreSugerido;
         return this.confirmar();
       }
-      if (!niega && limpiarNombre(texto).split(" ").length >= 2 && !/\d/.test(texto)) {
-        this.datos.nombre = limpiarNombre(texto);
+      if (!niega && limpiarNombre(texto2).split(" ").length >= 2 && !/\d/.test(texto2)) {
+        this.datos.nombre = limpiarNombre(texto2);
         return this.confirmar();
       }
       if (niega) {
@@ -488,7 +500,7 @@ var Sesion = class {
     if (this.medico && paso === "confirmar" && afirma) return this.crear();
     if (this.medico && paso === "cancelar" && afirma) return this.cancelar();
     if (this.medico && paso === "cancelar" && niega) return this.menu("Perfecto, tu cita sigue en pie. \xBFTe ayudo con algo m\xE1s?");
-    const ip = await this.interpretar(texto);
+    const ip = await this.interpretar(texto2);
     if (!this.medico) {
       if (ip.intencion === "soy_medico") return this.prospecto();
       return this.inicio();
@@ -513,11 +525,11 @@ var Sesion = class {
     if (paso === "consulta") return this.responder(ip);
     return this.repetir("No te entend\xED bien \u{1F64F}");
   }
-  async interpretar(texto) {
+  async interpretar(texto2) {
     const opciones = this.opcionesVisibles();
     let ip = null;
     try {
-      ip = await this.d.cerebro.interpretar(texto, {
+      ip = await this.d.cerebro.interpretar(texto2, {
         medico: this.medico,
         paso: this.conv.paso,
         hoy: fechaLocal(this.d.ahora),
@@ -527,7 +539,7 @@ var Sesion = class {
     } catch (_) {
       ip = null;
     }
-    return ip || interpretarSinIA(texto);
+    return ip || interpretarSinIA(texto2);
   }
   opcionesVisibles() {
     const m = this.medico;
@@ -842,6 +854,30 @@ Te enviar\xE9 un recordatorio un d\xEDa antes. Si necesitas cambiarla o cancelar
     await this.d.avisos.citaCancelada(this.medico, c, this.e.telefono);
     return this.menu("Tu cita qued\xF3 *cancelada*. Ya le avis\xE9 al consultorio. \xBFQuieres agendar otra?");
   }
+  // ----- Respuesta al recordatorio -----
+  async respuestaRecordatorio(accion, citaId) {
+    const c = await this.d.almacen.cita(citaId);
+    const pac = await this.d.almacen.paciente(this.e.telefono);
+    if (!c || !pac || c.paciente_id !== pac.id) return this.medico ? this.menu("No encontr\xE9 esa cita. \xBFEn qu\xE9 te ayudo?") : this.inicio();
+    const m = await this.d.almacen.medicoPorId(c.medico_id);
+    if (!m) return this.inicio();
+    this.medico = m;
+    if (c.estado !== "confirmada" || new Date(c.inicio) < this.d.ahora) return this.menu("Esa cita ya no est\xE1 activa. \xBFEn qu\xE9 te ayudo?");
+    this.conv.datos = { citaId: c.id };
+    if (accion === "cambiar") return this.reagendar();
+    if (accion === "cancelar") return this.preguntarCancelar();
+    await this.d.almacen.confirmarAsistencia(c.id);
+    this.ir("menu", {});
+    const i = new Date(c.inicio);
+    const lugar = [m.consultorio, m.direccion].filter(Boolean).join(", ");
+    return [{
+      tipo: "texto",
+      texto: `\xA1Gracias por confirmar! \u{1F64C} Te esperamos el *${fechaLarga(fechaLocal(i)).toLowerCase()} a las ${hora12(i)}*.${lugar ? `
+
+\u{1F4CD} ${lugar}` : ""}${m.ubicacion_gps ? `
+\u{1F5FA}\uFE0F ${m.ubicacion_gps}` : ""}`
+    }];
+  }
   // ----- Preguntas -----
   async responder(ip) {
     this.ir("consulta", {});
@@ -867,8 +903,8 @@ Te enviar\xE9 un recordatorio un d\xEDa antes. Si necesitas cambiarla o cancelar
 ${lineas.join("\n")}` : "Por ahora no tengo otro contacto del consultorio.", botones: BOTONES_MENU }];
   }
   // ----- Buscar médico -----
-  async buscarMedico(texto) {
-    const lista = (await this.d.almacen.buscarMedicos(texto)).filter((m) => disponible(m, this.d));
+  async buscarMedico(texto2) {
+    const lista = (await this.d.almacen.buscarMedicos(texto2)).filter((m) => disponible(m, this.d));
     if (!lista.length) {
       return [{
         tipo: "botones",
@@ -903,9 +939,9 @@ ${lineas.join("\n")}` : "Por ahora no tengo otro contacto del consultorio.", bot
       texto: "\xA1Qu\xE9 gusto! \u{1F60A} *Aid\xFA Med* atiende el WhatsApp de su consultorio 24/7: muestra sus horarios libres, agenda las citas y env\xEDa recordatorios.\n\nPuede ver los planes y registrarse aqu\xED: https://aidumed.app\n\nSi prefiere que le contactemos, escr\xEDbame su *nombre, especialidad y ciudad*."
     }];
   }
-  async guardarProspecto(texto) {
-    await this.d.almacen.guardarProspecto(this.e.telefono, this.e.nombrePerfil || null, texto);
-    await this.d.avisos.prospecto(this.e.telefono, this.e.nombrePerfil, texto);
+  async guardarProspecto(texto2) {
+    await this.d.almacen.guardarProspecto(this.e.telefono, this.e.nombrePerfil || null, texto2);
+    await this.d.avisos.prospecto(this.e.telefono, this.e.nombrePerfil, texto2);
     this.ir("inicio", {});
     return [{ tipo: "texto", texto: "\xA1Gracias! El equipo de Aid\xFA Med le escribir\xE1 muy pronto por este medio. \u{1F64C}" }];
   }
@@ -957,7 +993,7 @@ ${servicios || "- (sin servicios)"}`,
 }
 function crearCerebro(apiKey) {
   return {
-    async interpretar(texto, ctx) {
+    async interpretar(texto2, ctx) {
       if (!apiKey) return null;
       const sistema = [
         "Eres el asistente de citas por WhatsApp de un consultorio m\xE9dico en Honduras (servicio Aid\xFA Med).",
@@ -989,7 +1025,7 @@ function crearCerebro(apiKey) {
             system: sistema,
             tools: [HERRAMIENTA],
             tool_choice: { type: "tool", name: "interpretar" },
-            messages: [{ role: "user", content: texto.slice(0, 1e3) }]
+            messages: [{ role: "user", content: texto2.slice(0, 1e3) }]
           })
         });
         if (!r.ok) {
@@ -1005,6 +1041,68 @@ function crearCerebro(apiKey) {
       } finally {
         clearTimeout(reloj);
       }
+    }
+  };
+}
+
+// plantillas.ts
+var limpio = (t, n = 60) => String(t ?? "").replace(/\s+/g, " ").trim().slice(0, n) || "\u2014";
+var nombreMedico2 = (m) => [m.titulo, m.nombre].filter(Boolean).join(" ");
+var primerNombre = (t) => (t || "").split(" ")[0] || "";
+function texto(valor) {
+  return { type: "text", text: valor };
+}
+function respuesta(indice, payload) {
+  return { type: "button", sub_type: "quick_reply", index: String(indice), parameters: [{ type: "payload", payload }] };
+}
+function recordatorio(para, c, m) {
+  const i = new Date(c.inicio);
+  return {
+    messaging_product: "whatsapp",
+    to: para,
+    type: "template",
+    template: {
+      name: "recordatorio_cita",
+      language: { code: "es" },
+      components: [
+        {
+          type: "body",
+          parameters: [
+            texto(limpio(primerNombre(c.nombre_paciente) || "hola", 40)),
+            texto(limpio(nombreMedico2(m))),
+            texto(limpio(fechaLarga(fechaLocal(i)).toLowerCase())),
+            texto(limpio(hora12(i))),
+            texto(limpio([m.consultorio, m.direccion].filter(Boolean).join(", "), 120))
+          ]
+        },
+        respuesta(0, `rec:si:${c.id}`),
+        respuesta(1, `rec:cambiar:${c.id}`),
+        respuesta(2, `rec:cancelar:${c.id}`)
+      ]
+    }
+  };
+}
+function canceladaPorConsultorio(para, c, m) {
+  const i = new Date(c.inicio);
+  return {
+    messaging_product: "whatsapp",
+    to: para,
+    type: "template",
+    template: {
+      name: "cita_cancelada_consultorio",
+      language: { code: "es" },
+      components: [
+        {
+          type: "body",
+          parameters: [
+            texto(limpio(primerNombre(c.nombre_paciente) || "hola", 40)),
+            texto(limpio(nombreMedico2(m))),
+            texto(limpio(fechaLarga(fechaLocal(i)).toLowerCase())),
+            texto(limpio(hora12(i)))
+          ]
+        },
+        respuesta(0, `agenda:${m.id}`)
+      ]
     }
   };
 }
@@ -1131,6 +1229,10 @@ Deno.serve(async (req) => {
     return new Response("No autorizado", { status: 403 });
   }
   if (req.method === "POST" && ruta === "simular") return simular(req);
+  if (req.method === "POST" && (ruta === "recordatorios" || ruta === "evento")) {
+    if (req.headers.get("x-aviso-secreto") !== Deno.env.get("AVISO_SECRETO")) return new Response("No autorizado", { status: 401 });
+    return ruta === "recordatorios" ? recordatorios() : evento(req);
+  }
   if (req.method === "POST") return webhook(req);
   return new Response("M\xE9todo no permitido", { status: 405 });
 });
@@ -1185,4 +1287,39 @@ async function simular(req) {
   const salidas = await atender(e, { almacen, avisos: crearAvisos(true), cerebro, ahora: /* @__PURE__ */ new Date(), permitirAprobados: true });
   for (const s of salidas) await almacen.registrar(telefono, "saliente", s, null);
   return json(req, { salidas, ia: !!Deno.env.get("ANTHROPIC_API_KEY") });
+}
+var whatsappListo = () => !!(Deno.env.get("WA_TOKEN") && Deno.env.get("WA_PHONE_ID"));
+var esSimulado = (tel) => tel.startsWith("sim");
+async function recordatorios() {
+  const ahora = Date.now();
+  const r = await sb.from("citas").select("*, pacientes(telefono), medicos(*)").eq("estado", "confirmada").is("recordatorio_at", null).gte("inicio", new Date(ahora + 20 * 36e5).toISOString()).lte("inicio", new Date(ahora + 26 * 36e5).toISOString());
+  if (r.error) return new Response(r.error.message, { status: 500 });
+  let enviados = 0, pendientes = 0;
+  for (const fila of r.data || []) {
+    const tel = fila.pacientes?.telefono;
+    if (!tel || esSimulado(tel)) continue;
+    if (!whatsappListo()) {
+      pendientes++;
+      continue;
+    }
+    const carga = recordatorio(tel, fila, fila.medicos);
+    const id = await enviar(tel, carga);
+    await almacen.registrar(tel, "saliente", carga, id);
+    if (id) {
+      enviados++;
+      await sb.from("citas").update({ recordatorio_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", fila.id);
+    }
+  }
+  return new Response(JSON.stringify({ enviados, pendientes }), { headers: { "content-type": "application/json" } });
+}
+async function evento(req) {
+  const { tipo, cita_id } = await req.json().catch(() => ({}));
+  if (tipo !== "cancelada_consultorio" || !cita_id) return new Response("Sin acci\xF3n");
+  const r = await sb.from("citas").select("*, pacientes(telefono), medicos(*)").eq("id", cita_id).maybeSingle();
+  const tel = r.data?.pacientes?.telefono;
+  if (!r.data || !tel || esSimulado(tel) || !whatsappListo()) return new Response("Sin env\xEDo");
+  const carga = canceladaPorConsultorio(tel, r.data, r.data.medicos);
+  const id = await enviar(tel, carga);
+  await almacen.registrar(tel, "saliente", carga, id);
+  return new Response(id ? "Enviado" : "Error al enviar");
 }

@@ -43,6 +43,7 @@ export interface Almacen {
   cita(id: string): Promise<Cita | null>;
   crearCita(c: NuevaCita): Promise<Cita | "ocupado">;
   cancelarCita(id: string, por: "paciente" | "consultorio"): Promise<void>;
+  confirmarAsistencia(id: string): Promise<void>;
   feriados(): Promise<Rango[]>;
   guardarProspecto(telefono: string, nombre: string | null, mensaje: string): Promise<void>;
 }
@@ -183,6 +184,14 @@ class Sesion {
       if (!m || !disponible(m, this.d)) return this.inicio("Ese médico ya no está disponible. ¿Eres paciente o médico?");
       this.medico = m;
       return this.saludo();
+    }
+    // Botones de las plantillas (recordatorio, cancelación del consultorio): traen la cita o el médico.
+    if (k === "rec") return this.respuestaRecordatorio(v, w);
+    if (k === "agenda") {
+      const m = await this.d.almacen.medicoPorId(v);
+      if (!m || !disponible(m, this.d)) return this.inicio();
+      this.medico = m;
+      return this.iniciarAgenda();
     }
     if (!this.medico) return this.inicio();
 
@@ -604,6 +613,31 @@ class Sesion {
     await this.d.almacen.cancelarCita(c.id, "paciente");
     await this.d.avisos.citaCancelada(this.medico!, c, this.e.telefono);
     return this.menu("Tu cita quedó *cancelada*. Ya le avisé al consultorio. ¿Quieres agendar otra?");
+  }
+
+  // ----- Respuesta al recordatorio -----
+  async respuestaRecordatorio(accion: string, citaId: string): Promise<Salida[]> {
+    const c = await this.d.almacen.cita(citaId);
+    const pac = await this.d.almacen.paciente(this.e.telefono);
+    if (!c || !pac || c.paciente_id !== pac.id) return this.medico ? this.menu("No encontré esa cita. ¿En qué te ayudo?") : this.inicio();
+    const m = await this.d.almacen.medicoPorId(c.medico_id);
+    if (!m) return this.inicio();
+    this.medico = m;
+    if (c.estado !== "confirmada" || new Date(c.inicio) < this.d.ahora) return this.menu("Esa cita ya no está activa. ¿En qué te ayudo?");
+    this.conv.datos = { citaId: c.id };
+    if (accion === "cambiar") return this.reagendar();
+    if (accion === "cancelar") return this.preguntarCancelar();
+    await this.d.almacen.confirmarAsistencia(c.id);
+    this.ir("menu", {});
+    const i = new Date(c.inicio);
+    const lugar = [m.consultorio, m.direccion].filter(Boolean).join(", ");
+    return [{
+      tipo: "texto",
+      texto: `¡Gracias por confirmar! 🙌 Te esperamos el *${fechaLarga(fechaLocal(i)).toLowerCase()} a las ${hora12(i)}*${lugar ? `
+
+📍 ${lugar}` : ""}${m.ubicacion_gps ? `
+🗺️ ${m.ubicacion_gps}` : ""}`,
+    }];
   }
 
   // ----- Preguntas -----
