@@ -45,9 +45,9 @@ Deno.serve(async (req) => {
   }
 
   if (req.method === "POST" && ruta === "simular") return simular(req);
-  if (req.method === "POST" && (ruta === "recordatorios" || ruta === "evento")) {
+  if (req.method === "POST" && (ruta === "recordatorios" || ruta === "evento" || ruta === "meta")) {
     if (req.headers.get("x-aviso-secreto") !== Deno.env.get("AVISO_SECRETO")) return new Response("No autorizado", { status: 401 });
-    return ruta === "recordatorios" ? recordatorios() : evento(req);
+    return ruta === "recordatorios" ? recordatorios() : ruta === "evento" ? evento(req) : meta(req);
   }
   if (req.method === "POST") return webhook(req);
   return new Response("Método no permitido", { status: 405 });
@@ -140,4 +140,22 @@ async function evento(req: Request): Promise<Response> {
   const id = await enviar(tel, carga);
   await almacen.registrar(tel, "saliente", carga, id);
   return new Response(id ? "Enviado" : "Error al enviar");
+}
+
+// ---------- Mantenimiento con Meta (uso interno) ----------
+// Suscribe la cuenta de WhatsApp Business a esta app para que Meta entregue los mensajes al webhook.
+async function meta(req: Request): Promise<Response> {
+  const { accion, waba } = await req.json().catch(() => ({}));
+  if (!/^\d+$/.test(String(waba || ""))) return new Response("Falta waba", { status: 400 });
+  const version = Deno.env.get("WA_API_VERSION") || "v25.0";
+  const url = `https://graph.facebook.com/${version}/${waba}/subscribed_apps`;
+  const auth = { authorization: `Bearer ${Deno.env.get("WA_TOKEN")}` };
+  let suscribir: unknown = null;
+  if (accion === "suscribir") {
+    const r = await fetch(url, { method: "POST", headers: auth });
+    suscribir = await r.json().catch(() => ({ status: r.status }));
+  }
+  const g = await fetch(url, { headers: auth });
+  const apps = await g.json().catch(() => ({ status: g.status }));
+  return new Response(JSON.stringify({ suscribir, apps }), { headers: { "content-type": "application/json" } });
 }
