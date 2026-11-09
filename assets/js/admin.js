@@ -134,7 +134,7 @@
         '<figure>' + (urls[1] ? '<img src="' + urls[1] + '" alt="Foto de perfil">' : '<div class="vacio">Sin foto</div>') + '<figcaption><span>Foto de perfil</span></figcaption></figure>' +
       '</div>' +
       '<section class="caja"><h2>Profesional</h2><dl class="datos">' +
-        fila('Correo', m.correo) + fila('Colegiación', m.colegiacion) + fila('Especialidad', m.especialidad === 'Otra' ? m.especialidad_otra : m.especialidad) + fila('Plan', m.plan) + fila('Descripción', m.descripcion) +
+        fila('Correo', m.correo) + fila('Colegiación', m.colegiacion) + fila('Especialidad', m.especialidad === 'Otra' ? m.especialidad_otra : m.especialidad) + fila('Plan', m.plan) + fila('Código del asistente', m.codigo ? m.codigo + '  ·  ' + App.enlacePacientes(m.codigo) : (m.estado === 'en_revision' ? 'Se asigna al aprobar' : '')) + fila('Descripción', m.descripcion) +
       '</dl></section>' +
       '<section class="caja"><h2>Consultorio</h2><dl class="datos">' +
         fila('Nombre', m.consultorio) + fila('Dirección', m.direccion) + fila('WhatsApp', m.whatsapp_consultorio) + fila('Teléfono', m.telefono_consultorio) +

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador del asistente · Aidú Med</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0B6E5F">
+<link rel="icon" type="image/png" href="/assets/img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/styles.css?v=4">
+<link rel="stylesheet" href="/assets/css/app.css?v=11">
+<link rel="stylesheet" href="/assets/css/simulador.css?v=1">
+<script src="/assets/vendor/supabase-2.119.0.js" defer></script>
+<script src="/assets/js/app.js?v=11" defer></script>
+<script src="/assets/js/simulador.js?v=1" defer></script>
+</head>
+<body class="app">
+<header class="barra-app">
+  <div class="contenedor">
+    <a href="/admin" aria-label="Volver al panel"><img src="/assets/img/logo-aidu-med.png" alt="Aidú Med" width="600" height="138"></a>
+    <div class="acciones-barra"><a class="boton boton-secundario boton-chico" href="/admin">Volver al panel</a></div>
+  </div>
+</header>
+<main class="admin simulador" id="contenido">
+  <p class="cargando" id="cargando">Cargando…</p>
+  <div id="sin-permiso" class="caja" hidden><h2>No tiene acceso a esta página</h2><p>Esta sección es solo para el equipo de Aidú Med.</p></div>
+
+  <div id="panel" class="sim-panel" hidden>
+    <section class="sim-lado">
+      <h1>Probar el asistente</h1>
+      <p>Chatee como si fuera un paciente. Lo que ve aquí es exactamente lo que el asistente respondería por WhatsApp.</p>
+      <label class="campo">Médico
+        <select id="medico"></select>
+      </label>
+      <button type="button" class="boton boton-primario" id="empezar">Empezar como paciente</button>
+      <p class="ayuda" id="ayuda-medico">Aparecen los médicos aprobados o activos. El asistente entra con el código del médico, igual que el enlace que recibirán los pacientes.</p>
+      <div class="sim-estado">
+        <span class="estado" id="estado-ia"></span>
+      </div>
+      <div class="sim-notas">
+        <h2>Ideas para probar</h2>
+        <ul>
+          <li>"Quiero una cita para el jueves en la tarde"</li>
+          <li>"¿Cuánto cuesta la limpieza?"</li>
+          <li>"¿Atienden el sábado?"</li>
+          <li>"Quiero cancelar mi cita"</li>
+          <li>Escribir sin código: "Hola" (como un número desconocido)</li>
+        </ul>
+        <p class="ayuda">Las citas que agende aquí son reales en la agenda del médico y le llega un correo con "[Prueba]". "Reiniciar" borra la conversación y sus citas de prueba.</p>
+      </div>
+      <button type="button" class="boton boton-secundario" id="reiniciar">Reiniciar conversación</button>
+    </section>
+
+    <section class="telefono" aria-label="Conversación simulada">
+      <div class="tel-barra">
+        <div class="tel-avatar">ú</div>
+        <div><strong>Aidú Med</strong><span id="tel-sub">Asistente de citas</span></div>
+      </div>
+      <div class="tel-chat" id="chat" aria-live="polite"></div>
+      <form class="tel-entrada" id="form">
+        <input id="texto" type="text" autocomplete="off" placeholder="Escriba un mensaje" aria-label="Mensaje">
+        <button type="submit" aria-label="Enviar"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 20.5V14l9-2l-9-2V3.5L22 12z"/></svg></button>
+      </form>
+      <div class="hoja" id="hoja" hidden>
+        <div class="hoja-caja" role="dialog" aria-modal="true" aria-labelledby="hoja-titulo">
+          <div class="hoja-cabecera"><button type="button" id="hoja-cerrar" aria-label="Cerrar">✕</button><strong id="hoja-titulo"></strong></div>
+          <div class="hoja-cuerpo" id="hoja-cuerpo"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+</body>
+</html>

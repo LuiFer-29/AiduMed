@@ -5,3 +5,4 @@ Disallow: /cuenta
 Disallow: /mi-perfil
 Disallow: /admin
 Disallow: /nueva-contrasena
+Disallow: /simulador

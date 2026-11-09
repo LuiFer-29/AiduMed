@@ -1,5 +1,7 @@
 [build]
   publish = "."
+  # No publicar (ni gastar créditos) si el cambio solo toca la carpeta supabase/.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':(exclude)supabase'"
 
 [[redirects]]
   from = "/cuenta"
@@ -9,6 +11,11 @@
 [[redirects]]
   from = "/mi-perfil"
   to = "/mi-perfil.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin/simulador"
+  to = "/simulador.html"
   status = 200
 
 [[redirects]]

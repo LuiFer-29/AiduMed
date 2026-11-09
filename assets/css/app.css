@@ -168,3 +168,4 @@ figcaption .enlace-boton { padding: 0; font-size: 13px; }
   .caja { padding: 20px 18px; }
 }
 .tabla tr.fila-cuenta { cursor: default; } .tabla tr.fila-cuenta:hover td { background: transparent; }
+.titulo-admin { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

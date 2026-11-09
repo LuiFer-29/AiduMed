@@ -87,6 +87,12 @@ window.AIDU_SB = {
       return txt + (r.motivo ? ' · ' + r.motivo : '');
     },
 
+    // Número del asistente (compartido) y enlace que el médico comparte con sus pacientes.
+    asistente: '50492980013',
+    enlacePacientes: function (codigo) {
+      return 'https://wa.me/' + this.asistente + '?text=' + encodeURIComponent('Hola, quiero una cita (código ' + codigo + ')');
+    },
+
     escapar: function (t) {
       return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
         return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];

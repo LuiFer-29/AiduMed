@@ -11,10 +11,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=4">
-<link rel="stylesheet" href="/assets/css/app.css?v=10">
+<link rel="stylesheet" href="/assets/css/app.css?v=11">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
-<script src="/assets/js/app.js?v=9" defer></script>
-<script src="/assets/js/admin.js?v=10" defer></script>
+<script src="/assets/js/app.js?v=11" defer></script>
+<script src="/assets/js/admin.js?v=11" defer></script>
 </head>
 <body class="app">
 <header class="barra-app">
@@ -27,7 +27,7 @@
   <p class="cargando" id="cargando">Cargando…</p>
   <div id="sin-permiso" class="caja" hidden><h2>No tiene acceso a esta página</h2><p>Esta sección es solo para el equipo de Aidú Med.</p></div>
   <div id="panel" hidden style="display:flex;flex-direction:column;gap:20px">
-    <h1>Médicos registrados</h1>
+    <div class="titulo-admin"><h1>Médicos registrados</h1><a class="boton boton-secundario boton-chico" href="/admin/simulador">Probar el asistente</a></div>
     <div class="filtros" role="group" aria-label="Filtrar por estado" id="filtros"></div>
     <p class="filtro-ayuda" id="filtro-ayuda"></p>
     <div class="tabla-caja">
