@@ -91,7 +91,14 @@ window.AIDU_SB = {
     asistente: '50492980013',
     enlacePacientes: function (m) {
       var tratamiento = m.titulo === 'Dra.' ? 'la Dra.' : 'el Dr.';
-      return 'https://wa.me/' + this.asistente + '?text=' + encodeURIComponent('Hola, quiero agendar una cita con ' + tratamiento + ' ' + (m.nombre || '').trim());
+      // El código del médico va escondido al final con caracteres invisibles: el paciente solo ve el nombre,
+      // y el asistente sabe a qué médico va aunque haya dos con el mismo nombre.
+      var inv = ['\u200B', '\u200C', '\u200D', '\u2060'], abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', oculto = '';
+      String(m.codigo || '').toUpperCase().split('').forEach(function (c) {
+        var n = abc.indexOf(c);
+        if (n >= 0) oculto += inv[Math.floor(n / 16)] + inv[Math.floor(n / 4) % 4] + inv[n % 4];
+      });
+      return 'https://wa.me/' + this.asistente + '?text=' + encodeURIComponent('Hola, quiero agendar una cita con ' + tratamiento + ' ' + (m.nombre || '').trim() + oculto);
     },
 
     escapar: function (t) {

@@ -86,7 +86,26 @@ export function medicoEnTexto(texto: string): string | null {
   return m ? m[1].trim() : null;
 }
 
+// El enlace del médico lleva su código escondido con caracteres invisibles (no se ven en WhatsApp).
+const INVISIBLES = ["\u200B", "\u200C", "\u200D", "\u2060"];
+const ALFABETO = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+export function codigoInvisible(texto: string): string | null {
+  const marcas = [...texto].filter((c) => INVISIBLES.includes(c)).map((c) => INVISIBLES.indexOf(c));
+  if (marcas.length < 12 || marcas.length % 3) return null;
+  let codigo = "";
+  for (let i = 0; i < marcas.length; i += 3) {
+    const n = marcas[i] * 16 + marcas[i + 1] * 4 + marcas[i + 2];
+    if (n >= ALFABETO.length) return null;
+    codigo += ALFABETO[n];
+  }
+  return /^[A-Z]{2}\d{2}$/.test(codigo) ? codigo : null;
+}
+const quitarInvisibles = (t: string) => [...t].filter((c) => !INVISIBLES.includes(c)).join("");
+
 export function codigoEnTexto(texto: string): string | null {
+  const oculto = codigoInvisible(texto);
+  if (oculto) return oculto;
+  texto = quitarInvisibles(texto);
   const m = texto.match(/c[oó]digo[:\s#]*([a-z]{2}\d{2})\b/i) || texto.match(/^\s*([a-z]{2}\d{2})\s*$/i);
   return m ? m[1].toUpperCase() : null;
 }
@@ -125,7 +144,7 @@ export async function atender(e: Entrada, d: Dependencias): Promise<Salida[]> {
 
   const codigo = e.texto ? codigoEnTexto(e.texto) : null;
   const porCodigo = codigo ? await almacen.medicoPorCodigo(codigo) : null;
-  const nombre = !porCodigo && e.texto ? medicoEnTexto(e.texto) : null;
+  const nombre = !porCodigo && e.texto ? medicoEnTexto(quitarInvisibles(e.texto)) : null;
   const porNombre = nombre ? (await almacen.buscarMedicos(nombre)).filter((m) => disponible(m, d)) : [];
   const exactos = porNombre.filter((m) => sinAcentos((m.nombre || "").toLowerCase()) === sinAcentos(nombre!.toLowerCase()));
   if (porCodigo && disponible(porCodigo, d)) {
@@ -140,7 +159,7 @@ export async function atender(e: Entrada, d: Dependencias): Promise<Salida[]> {
   } else if (e.id) {
     salidas = await s.porBoton(e.id);
   } else {
-    salidas = await s.porTexto((e.texto || "").trim());
+    salidas = await s.porTexto(quitarInvisibles(e.texto || "").trim());
   }
   conv.medico_id = s.medico?.id ?? null;
   await almacen.guardarConversacion(conv);

@@ -319,7 +319,24 @@ function medicoEnTexto(texto2) {
   const m = texto2.match(/cita con (?:el |la )?(?:dra?|doctora?)\.?\s+([\p{L}][\p{L} .'-]{2,60}?)[\s.!¡]*$/iu);
   return m ? m[1].trim() : null;
 }
+var INVISIBLES = ["\u200B", "\u200C", "\u200D", "\u2060"];
+var ALFABETO = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+function codigoInvisible(texto2) {
+  const marcas = [...texto2].filter((c) => INVISIBLES.includes(c)).map((c) => INVISIBLES.indexOf(c));
+  if (marcas.length < 12 || marcas.length % 3) return null;
+  let codigo = "";
+  for (let i = 0; i < marcas.length; i += 3) {
+    const n = marcas[i] * 16 + marcas[i + 1] * 4 + marcas[i + 2];
+    if (n >= ALFABETO.length) return null;
+    codigo += ALFABETO[n];
+  }
+  return /^[A-Z]{2}\d{2}$/.test(codigo) ? codigo : null;
+}
+var quitarInvisibles = (t) => [...t].filter((c) => !INVISIBLES.includes(c)).join("");
 function codigoEnTexto(texto2) {
+  const oculto = codigoInvisible(texto2);
+  if (oculto) return oculto;
+  texto2 = quitarInvisibles(texto2);
   const m = texto2.match(/c[oó]digo[:\s#]*([a-z]{2}\d{2})\b/i) || texto2.match(/^\s*([a-z]{2}\d{2})\s*$/i);
   return m ? m[1].toUpperCase() : null;
 }
@@ -349,7 +366,7 @@ async function atender(e, d) {
   let salidas;
   const codigo = e.texto ? codigoEnTexto(e.texto) : null;
   const porCodigo = codigo ? await almacen2.medicoPorCodigo(codigo) : null;
-  const nombre = !porCodigo && e.texto ? medicoEnTexto(e.texto) : null;
+  const nombre = !porCodigo && e.texto ? medicoEnTexto(quitarInvisibles(e.texto)) : null;
   const porNombre = nombre ? (await almacen2.buscarMedicos(nombre)).filter((m) => disponible(m, d)) : [];
   const exactos = porNombre.filter((m) => sinAcentos2((m.nombre || "").toLowerCase()) === sinAcentos2(nombre.toLowerCase()));
   if (porCodigo && disponible(porCodigo, d)) {
@@ -364,7 +381,7 @@ async function atender(e, d) {
   } else if (e.id) {
     salidas = await s.porBoton(e.id);
   } else {
-    salidas = await s.porTexto((e.texto || "").trim());
+    salidas = await s.porTexto(quitarInvisibles(e.texto || "").trim());
   }
   conv.medico_id = s.medico?.id ?? null;
   await almacen2.guardarConversacion(conv);
