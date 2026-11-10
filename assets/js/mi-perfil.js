@@ -306,12 +306,14 @@
         var grad = c.createLinearGradient(0, 0, W, 0); grad.addColorStop(0, '#2DBE7E'); grad.addColorStop(1, '#0B6E5F');
         c.fillStyle = '#FFFFFF'; c.fillRect(0, 0, W, H);
         c.fillStyle = grad; c.fillRect(0, 0, W, 640);
-        if (logo) c.drawImage(logo, (W - 420) / 2, 80, 420, 420 * logo.height / logo.width);
+        // Logo grande y protagonista; debajo, el mensaje en una línea.
+        if (logo) c.drawImage(logo, (W - 760) / 2, 70, 760, 760 * logo.height / logo.width);
         c.textAlign = 'center'; c.fillStyle = '#FFFFFF';
-        c.font = '800 92px "Baloo Chettan 2", sans-serif';
-        c.fillText('Agenda tu cita', W / 2, 315);
-        c.font = '600 54px "Plus Jakarta Sans", sans-serif';
-        c.fillText('por WhatsApp, a cualquier hora', W / 2, 400);
+        c.font = '800 70px "Baloo Chettan 2", sans-serif';
+        c.fillText('Agenda tu cita por WhatsApp', W / 2, 345);
+        c.fillStyle = 'rgba(255,255,255,.88)';
+        c.font = '600 44px "Plus Jakarta Sans", sans-serif';
+        c.fillText('Rápido, fácil y a cualquier hora', W / 2, 420);
         // QR sobre tarjeta blanca con sombra.
         var Q = 800, qx = (W - Q) / 2, qy = 540;
         c.save(); c.shadowColor = 'rgba(16,33,31,.18)'; c.shadowBlur = 50; c.shadowOffsetY = 16;
