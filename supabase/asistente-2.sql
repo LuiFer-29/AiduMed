@@ -24,7 +24,8 @@ create trigger citas_avisar after update on public.citas for each row execute fu
 -- Recordatorios: cada hora, a los 5 minutos.
 create extension if not exists pg_cron;
 select cron.unschedule(jobid) from cron.job where jobname = 'aidu-recordatorios';
-select cron.schedule('aidu-recordatorios', '5 * * * *', $$
+-- 23:30 y 0:30–5:30 UTC = 5:30–11:30 p. m. en Honduras (recordatorio el día anterior a la cita).
+select cron.schedule('aidu-recordatorios', '30 23,0-5 * * *', $$
   select net.http_post(
     url := 'https://lpdtiyhcwubaryrrpxgw.supabase.co/functions/v1/asistente/recordatorios',
     body := '{}'::jsonb,

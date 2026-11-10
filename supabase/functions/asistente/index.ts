@@ -2,7 +2,7 @@
 //  GET  /asistente            → verificación del webhook de Meta
 //  POST /asistente            → mensajes de WhatsApp (firma de Meta obligatoria)
 //  POST /asistente/simular    → simulador del panel de administración (sesión de administrador)
-//  POST /asistente/recordatorios → recordatorios de citas (cada hora, pg_cron; clave interna)
+//  POST /asistente/recordatorios → recordatorios de citas (día anterior, 5:30–11:30 p. m., pg_cron; clave interna)
 //  POST /asistente/evento     → avisos al paciente (p. ej. el consultorio canceló; trigger; clave interna)
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { crearAvisos } from "./correo.ts";
@@ -10,6 +10,7 @@ import { crearAlmacen } from "./datos.ts";
 import { atender, type Cita, type Medico, type Salida } from "./flujo.ts";
 import { crearCerebro } from "./ia.ts";
 import { canceladaPorConsultorio, recordatorio } from "./plantillas.ts";
+import { fechaLocal, instante, minutosLocales, sumarDias } from "./tiempo.ts";
 import { cargaUtil, enviar, firmaValida, leerNotificacion, marcarLeido } from "./whatsapp.ts";
 
 const claveServicio = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
@@ -109,10 +110,16 @@ const whatsappListo = () => !!(Deno.env.get("WA_TOKEN") && Deno.env.get("WA_PHON
 const esSimulado = (tel: string) => tel.startsWith("sim");
 
 async function recordatorios(): Promise<Response> {
-  const ahora = Date.now();
-  // Citas que empiezan entre 20 y 26 horas desde ahora (la tarea corre cada hora).
+  // Se envían el día anterior a la cita desde las 5:30 p. m. (hora de Honduras). La tarea corre
+  // 5:30, 6:30 … 11:30 p. m.; las horas siguientes reintentan lo que no se pudo enviar.
+  const ahora = new Date();
+  const desde = 17 * 60 + 30;
+  if (minutosLocales(ahora) < desde) return new Response(JSON.stringify({ enviados: 0, motivo: "antes de las 5:30 p. m." }), { headers: { "content-type": "application/json" } });
+  const hoy = fechaLocal(ahora), manana = sumarDias(hoy, 1);
+  // Las citas agendadas después de las 5:30 p. m. no llevan recordatorio: el paciente acaba de confirmarla.
   const r = await sb.from("citas").select("*, pacientes(telefono), medicos(*)").eq("estado", "confirmada").is("recordatorio_at", null)
-    .gte("inicio", new Date(ahora + 20 * 3600_000).toISOString()).lte("inicio", new Date(ahora + 26 * 3600_000).toISOString());
+    .gte("inicio", instante(manana, "00:00").toISOString()).lt("inicio", instante(sumarDias(manana, 1), "00:00").toISOString())
+    .lt("creada_at", instante(hoy, "17:30").toISOString());
   if (r.error) return new Response(r.error.message, { status: 500 });
   let enviados = 0, pendientes = 0;
   for (const fila of r.data || []) {

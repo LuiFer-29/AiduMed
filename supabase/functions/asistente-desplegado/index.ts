@@ -1,4 +1,4 @@
-// ARCHIVO GENERADO: no editar. Fuente en supabase/functions/asistente/. Generar con: npx esbuild index.ts --bundle --format=esm --platform=neutral --external:'npm:*'
+// ARCHIVO GENERADO: no editar a mano. Fuente en supabase/functions/asistente/ (se empaqueta con esbuild).
 
 // index.ts
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -806,7 +806,7 @@ ${this.resumen()}`,
 
 ${resumen}${mapa}
 
-Te enviar\xE9 un recordatorio un d\xEDa antes. Si necesitas cambiarla o cancelarla, escribe *mis citas*.`
+Te enviar\xE9 un recordatorio el d\xEDa anterior por la tarde. Si necesitas cambiarla o cancelarla, escribe *mis citas*.`
     }];
   }
   // ----- Mis citas -----
@@ -1321,8 +1321,11 @@ async function simular(req) {
 var whatsappListo = () => !!(Deno.env.get("WA_TOKEN") && Deno.env.get("WA_PHONE_ID"));
 var esSimulado = (tel) => tel.startsWith("sim");
 async function recordatorios() {
-  const ahora = Date.now();
-  const r = await sb.from("citas").select("*, pacientes(telefono), medicos(*)").eq("estado", "confirmada").is("recordatorio_at", null).gte("inicio", new Date(ahora + 20 * 36e5).toISOString()).lte("inicio", new Date(ahora + 26 * 36e5).toISOString());
+  const ahora = /* @__PURE__ */ new Date();
+  const desde = 17 * 60 + 30;
+  if (minutosLocales(ahora) < desde) return new Response(JSON.stringify({ enviados: 0, motivo: "antes de las 5:30 p. m." }), { headers: { "content-type": "application/json" } });
+  const hoy = fechaLocal(ahora), manana = sumarDias(hoy, 1);
+  const r = await sb.from("citas").select("*, pacientes(telefono), medicos(*)").eq("estado", "confirmada").is("recordatorio_at", null).gte("inicio", instante(manana, "00:00").toISOString()).lt("inicio", instante(sumarDias(manana, 1), "00:00").toISOString()).lt("creada_at", instante(hoy, "17:30").toISOString());
   if (r.error) return new Response(r.error.message, { status: 500 });
   let enviados = 0, pendientes = 0;
   for (const fila of r.data || []) {

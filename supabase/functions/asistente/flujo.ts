@@ -574,7 +574,7 @@ class Sesion {
     const mapa = m.ubicacion_gps ? `\n🗺️ ${m.ubicacion_gps}` : "";
     return [{
       tipo: "texto",
-      texto: `✅ ¡Listo! Tu cita quedó ${reagendada ? "reagendada" : "agendada"}:\n\n${resumen}${mapa}\n\nTe enviaré un recordatorio un día antes. Si necesitas cambiarla o cancelarla, escribe *mis citas*.`,
+      texto: `✅ ¡Listo! Tu cita quedó ${reagendada ? "reagendada" : "agendada"}:\n\n${resumen}${mapa}\n\nTe enviaré un recordatorio el día anterior por la tarde. Si necesitas cambiarla o cancelarla, escribe *mis citas*.`,
     }];
   }
 
