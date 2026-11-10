@@ -361,7 +361,7 @@
       almuerzo_hasta: document.getElementById('tiene-almuerzo').checked ? f.almuerzo_hasta.value : null,
       tiempo_entre_citas: f.tiempo_entre_citas.value, anticipacion: f.anticipacion.value, aviso_minimo_min: Number(f.aviso_minimo_min.value) || null,
       vacaciones: Array.prototype.map.call(document.querySelectorAll('.tarjeta-opcion[aria-pressed="true"]'), function (d) { return d.dataset.vacacion; }),
-      otras_vacaciones: Array.prototype.map.call(listaFechas.querySelectorAll('.fecha-fila'), function (fila) {
+      otras_vacaciones: modoDirecto ? undefined : Array.prototype.map.call(listaFechas.querySelectorAll('.fecha-fila'), function (fila) {
         var d = fila.querySelector('.f-desde').value;
         if (!d) return null;
         return { desde: d, hasta: fila.querySelector('.f-hasta').value || d, motivo: fila.querySelector('.f-motivo').value.trim() || null };
@@ -397,46 +397,6 @@
   // El aviso al equipo lo envía Supabase (trigger medicos_avisar → función aviso-estado) cuando el registro pasa a revisión.
 
   // ---------- Vacaciones sobre fechas con citas ----------
-  var TZ = 'America/Tegucigalpa';
-  var diaLocal = function (d) { return new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(d); };
-  async function citasEnFechas(rangos) {
-    if (!perfil || !rangos.length) return [];
-    var r = await sb.from('citas').select('id, inicio, nombre_paciente').eq('medico_id', uid).eq('estado', 'confirmada')
-      .gt('inicio', new Date().toISOString()).order('inicio').limit(500);
-    if (r.error) return [];
-    return (r.data || []).filter(function (c) {
-      var d = diaLocal(new Date(c.inicio));
-      return rangos.some(function (x) { return d >= x.desde && d <= (x.hasta || x.desde); });
-    });
-  }
-  function preguntarCitas(citas) {
-    return new Promise(function (resolver) {
-      var cuando = function (c) {
-        var i = new Date(c.inicio);
-        var f = new Intl.DateTimeFormat('es-HN', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long' }).format(i);
-        var h = new Intl.DateTimeFormat('es-HN', { timeZone: TZ, hour: 'numeric', minute: '2-digit', hour12: true }).format(i).replace(/\s*a\.?\s*m\.?/i, ' a. m.').replace(/\s*p\.?\s*m\.?/i, ' p. m.');
-        return f.charAt(0).toUpperCase() + f.slice(1) + ', ' + h;
-      };
-      var n = citas.length, max = 5;
-      var fondo = document.createElement('div');
-      fondo.className = 'dialogo-fondo';
-      fondo.innerHTML = '<div class="dialogo" role="dialog" aria-modal="true" aria-labelledby="dlg-titulo">' +
-        '<h2 id="dlg-titulo">Tiene ' + n + (n === 1 ? ' cita' : ' citas') + ' en esas fechas</h2>' +
-        '<p>Las fechas nuevas quedarán cerradas para nuevas citas. ¿Qué hacemos con las que ya están agendadas?</p>' +
-        '<ul>' + citas.slice(0, max).map(function (c) { return '<li><strong>' + App.escapar(cuando(c)) + '</strong> · ' + App.escapar(c.nombre_paciente || 'Paciente') + '</li>'; }).join('') +
-        (n > max ? '<li class="mas">y ' + (n - max) + ' más</li>' : '') + '</ul>' +
-        '<div class="dialogo-botones">' +
-          '<button type="button" class="boton boton-peligro-lleno boton-dos-lineas" data-r="cancelar">Cancelarlas y avisar a los pacientes<small>Les llegará un mensaje por WhatsApp para elegir otra fecha.</small></button>' +
-          '<button type="button" class="boton boton-secundario boton-dos-lineas" data-r="mantener">Mantenerlas<small>Usted deberá atender a esos pacientes en la fecha y hora agendadas.</small></button>' +
-          '<button type="button" class="enlace-boton" data-r="volver">Volver a editar las fechas</button>' +
-        '</div></div>';
-      document.body.appendChild(fondo);
-      fondo.querySelector('[data-r="cancelar"]').focus();
-      fondo.querySelectorAll('[data-r]').forEach(function (b) {
-        b.addEventListener('click', function () { fondo.remove(); resolver(b.dataset.r); });
-      });
-    });
-  }
 
   btnSiguiente.addEventListener('click', async function () {
     if (!validarPaso(actual)) return;
@@ -444,9 +404,9 @@
     var decision = null, rangosNuevos = [];
     if (actual === 4 && perfil) {
       rangosNuevos = datosDelPaso(4).otras_vacaciones || [];
-      var afectadas = await citasEnFechas(rangosNuevos);
+      var afectadas = perfil ? await App.citasEnFechas(uid, rangosNuevos) : [];
       if (afectadas.length) {
-        decision = await preguntarCitas(afectadas);
+        decision = await App.preguntarCitas(afectadas);
         if (decision === 'volver') return;
       }
     }
@@ -495,5 +455,7 @@
   // El aviso de la cuenta solo hace falta al empezar o continuar un registro, no al editar datos ya aprobados.
   document.getElementById('cuenta-activa').hidden = !!(perfil && perfil.estado !== 'borrador');
   modoDirecto = !!(perfil && pasoDirecto >= 1 && pasoDirecto <= total && perfil.estado !== 'borrador' && perfil.estado !== 'rechazado');
+  // Al editar desde Mi perfil, las fechas libres se agregan y borran en el panel; aquí solo horario y vacaciones fijas.
+  document.getElementById('bloque-otras-fechas').hidden = modoDirecto;
   mostrarPaso(modoDirecto ? pasoDirecto : 1, true);
 })();

@@ -48,6 +48,50 @@ window.AIDU_SB = {
 
     // Mientras el registro no se ha enviado, la sesión se cierra tras 1 hora sin actividad
     // (también si el médico vuelve después). Ya registrado, la sesión queda abierta para el día a día.
+    // Citas confirmadas (futuras) del médico que caen dentro de unos rangos de fechas {desde, hasta}.
+    citasEnFechas: async function (uid, rangos) {
+      if (!rangos || !rangos.length) return [];
+      var r = await sb.from('citas').select('id, inicio, nombre_paciente').eq('medico_id', uid).eq('estado', 'confirmada')
+        .gt('inicio', new Date().toISOString()).order('inicio').limit(500);
+      if (r.error) return [];
+      var dia = function (d) { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Tegucigalpa' }).format(d); };
+      return (r.data || []).filter(function (c) {
+        var d = dia(new Date(c.inicio));
+        return rangos.some(function (x) { return d >= x.desde && d <= (x.hasta || x.desde); });
+      });
+    },
+
+    // Pregunta qué hacer con las citas que caen en días que se van a cerrar. Responde 'cancelar', 'mantener' o 'volver'.
+    preguntarCitas: function (citas) {
+      var TZ = 'America/Tegucigalpa', esc = App.escapar;
+      return new Promise(function (resolver) {
+        var cuando = function (c) {
+          var i = new Date(c.inicio);
+          var f = new Intl.DateTimeFormat('es-HN', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long' }).format(i);
+          var h = new Intl.DateTimeFormat('es-HN', { timeZone: TZ, hour: 'numeric', minute: '2-digit', hour12: true }).format(i).replace(/\s*a\.?\s*m\.?/i, ' a. m.').replace(/\s*p\.?\s*m\.?/i, ' p. m.');
+          return f.charAt(0).toUpperCase() + f.slice(1) + ', ' + h;
+        };
+        var n = citas.length, max = 5;
+        var fondo = document.createElement('div');
+        fondo.className = 'dialogo-fondo';
+        fondo.innerHTML = '<div class="dialogo" role="dialog" aria-modal="true" aria-labelledby="dlg-titulo">' +
+          '<h2 id="dlg-titulo">Tiene ' + n + (n === 1 ? ' cita' : ' citas') + ' en esas fechas</h2>' +
+          '<p>Las fechas nuevas quedarán cerradas para nuevas citas. ¿Qué hacemos con las que ya están agendadas?</p>' +
+          '<ul>' + citas.slice(0, max).map(function (c) { return '<li><strong>' + esc(cuando(c)) + '</strong> · ' + esc(c.nombre_paciente || 'Paciente') + '</li>'; }).join('') +
+          (n > max ? '<li class="mas">y ' + (n - max) + ' más</li>' : '') + '</ul>' +
+          '<div class="dialogo-botones">' +
+            '<button type="button" class="boton boton-peligro-lleno boton-dos-lineas" data-r="cancelar">Cancelarlas y avisar a los pacientes<small>Les llegará un mensaje por WhatsApp para elegir otra fecha.</small></button>' +
+            '<button type="button" class="boton boton-secundario boton-dos-lineas" data-r="mantener">Mantenerlas<small>Usted deberá atender a esos pacientes en la fecha y hora agendadas.</small></button>' +
+            '<button type="button" class="enlace-boton" data-r="volver">Volver a editar las fechas</button>' +
+          '</div></div>';
+        document.body.appendChild(fondo);
+        fondo.querySelector('[data-r="cancelar"]').focus();
+        fondo.querySelectorAll('[data-r]').forEach(function (b) {
+          b.addEventListener('click', function () { fondo.remove(); resolver(b.dataset.r); });
+        });
+      });
+    },
+
     vigilarRegistro: function (sesion) {
       var CLAVE = 'aidu-actividad', LIMITE = 60 * 60 * 1000;
       var leer = function () { try { return Number(localStorage.getItem(CLAVE)) || 0; } catch (e) { return 0; } };

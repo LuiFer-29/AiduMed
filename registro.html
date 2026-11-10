@@ -13,11 +13,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=4">
-<link rel="stylesheet" href="/assets/css/registro.css?v=12">
-<link rel="stylesheet" href="/assets/css/app.css?v=15">
+<link rel="stylesheet" href="/assets/css/registro.css?v=13">
+<link rel="stylesheet" href="/assets/css/app.css?v=16">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
-<script src="/assets/js/app.js?v=15" defer></script>
-<script src="/assets/js/registro.js?v=18" defer></script>
+<script src="/assets/js/app.js?v=16" defer></script>
+<script src="/assets/js/registro.js?v=19" defer></script>
 </head>
 <body class="registro">
 
@@ -229,9 +229,11 @@
           <button type="button" class="tarjeta-opcion" data-vacacion="Semana Santa" aria-pressed="true"><span><strong>Semana Santa</strong><span>Toda la semana</span></span><span class="casilla" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span></button>
           <button type="button" class="tarjeta-opcion" data-vacacion="Semana Morazánica" aria-pressed="true"><span><strong>Semana Morazánica</strong><span>Según la fecha oficial del año</span></span><span class="casilla" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span></button>
           <button type="button" class="tarjeta-opcion" data-vacacion="Navidad y Año Nuevo" aria-pressed="true"><span><strong>Navidad y Año Nuevo</strong><span>Del 24 de diciembre al 1 de enero</span></span><span class="casilla" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span></button>
+          <div id="bloque-otras-fechas">
           <div class="etiqueta-campo otras-titulo">Otras fechas libres</div>
           <div id="lista-fechas" class="lista-fechas"></div>
           <button type="button" class="boton-agregar" id="agregar-fechas">+ Agregar otras fechas</button>
+          </div>
           <template id="plantilla-fecha">
             <div class="fecha-fila">
               <div class="dos-columnas">

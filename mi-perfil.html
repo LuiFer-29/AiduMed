@@ -11,11 +11,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=4">
-<link rel="stylesheet" href="/assets/css/app.css?v=15">
+<link rel="stylesheet" href="/assets/css/app.css?v=16">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
-<script src="/assets/js/app.js?v=15" defer></script>
+<script src="/assets/js/app.js?v=16" defer></script>
 <script src="/assets/vendor/qrcode-1.4.4.min.js" defer></script>
-<script src="/assets/js/mi-perfil.js?v=17" defer></script>
+<script src="/assets/js/mi-perfil.js?v=18" defer></script>
 </head>
 <body class="app">
 <header class="barra-app">
@@ -158,10 +158,24 @@
         </section>
 
         <section class="caja">
-          <div class="caja-titulo"><h2>Vacaciones y días libres</h2><a class="editar-enlace" href="/registro?paso=4">Editar</a></div>
+          <div class="caja-titulo"><h2>Vacaciones y días libres</h2><a class="editar-enlace" href="/registro?paso=4" title="Editar las vacaciones de cada año">Editar</a></div>
           <p class="ayuda">En estas fechas el asistente no agenda citas.</p>
           <div class="chips" id="vacaciones"></div>
           <ul class="lista-fechas-perfil" id="otras-fechas"></ul>
+          <button type="button" class="boton-agregar-fecha" id="abrir-fecha">+ Agregar fecha</button>
+          <form class="form-fecha" id="form-fecha" hidden autocomplete="off">
+            <strong>Nueva fecha sin consulta</strong>
+            <div class="form-fecha-campos">
+              <label class="campo">Desde<input type="date" id="nf-desde" required></label>
+              <label class="campo">Hasta (opcional)<input type="date" id="nf-hasta"></label>
+            </div>
+            <label class="campo">Motivo (opcional)<input type="text" id="nf-motivo" maxlength="60" placeholder="Ej.: Congreso médico, viaje" autocomplete="off"></label>
+            <p class="mensaje error" id="nf-error" hidden></p>
+            <div class="cerrar-dia-botones">
+              <button type="submit" class="boton boton-primario boton-chico" id="nf-guardar">Guardar fecha</button>
+              <button type="button" class="boton boton-secundario boton-chico" id="nf-cancelar">Cancelar</button>
+            </div>
+          </form>
         </section>
 
         <section class="caja">

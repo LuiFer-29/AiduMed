@@ -149,6 +149,43 @@
   }
   pintarVacaciones();
 
+  // ---------- Agregar una fecha sin consulta (formulario siempre vacío) ----------
+  $('abrir-fecha').addEventListener('click', function () {
+    var f = $('form-fecha'); f.reset(); $('nf-error').hidden = true;
+    $('nf-desde').min = $('nf-hasta').min = diaLocal(new Date());
+    f.hidden = false; this.hidden = true; $('nf-desde').focus();
+  });
+  $('nf-cancelar').addEventListener('click', function () { $('form-fecha').reset(); $('form-fecha').hidden = true; $('abrir-fecha').hidden = false; });
+  $('nf-desde').addEventListener('change', function () { $('nf-hasta').min = this.value || diaLocal(new Date()); });
+  $('form-fecha').addEventListener('submit', async function (ev) {
+    ev.preventDefault();
+    var err = function (t) { $('nf-error').textContent = t; $('nf-error').hidden = false; };
+    var desde = $('nf-desde').value, hasta = $('nf-hasta').value || desde, motivo = $('nf-motivo').value.trim();
+    var hoy = diaLocal(new Date());
+    if (!desde) return err('Elija la fecha.');
+    if (desde < hoy) return err('Esa fecha ya pasó.');
+    if (hasta < desde) return err('La fecha «Hasta» debe ser igual o posterior a «Desde».');
+    $('nf-error').hidden = true;
+    var rango = { desde: desde, hasta: hasta, motivo: motivo || null };
+    var afectadas = await App.citasEnFechas(p.id, [rango]);
+    var decision = afectadas.length ? await App.preguntarCitas(afectadas) : null;
+    if (decision === 'volver') return;
+    var b = $('nf-guardar'); b.disabled = true; b.textContent = 'Guardando…';
+    // Se guardan solo las fechas vigentes más la nueva (las pasadas se limpian).
+    var vigentes = (p.otras_vacaciones || []).filter(function (r) { return (r.hasta || r.desde) >= hoy; });
+    var r = await App.sb.from('medicos').update({ otras_vacaciones: vigentes.concat([rango]).sort(function (a, c) { return a.desde < c.desde ? -1 : 1; }) }).eq('id', p.id).select().single();
+    if (!r.error && decision === 'cancelar') {
+      var c = await App.sb.rpc('cancelar_citas_fechas', { p_desde: desde, p_hasta: hasta });
+      if (c.error) r = c;
+    }
+    b.disabled = false; b.textContent = 'Guardar fecha';
+    if (r.error) return err('No se pudo guardar: ' + App.traducirError(r.error));
+    if (r.data && r.data.id) p = r.data; else await recargarPerfil();
+    $('form-fecha').reset(); $('form-fecha').hidden = true; $('abrir-fecha').hidden = false;
+    pintarVacaciones();
+    if (conCitas) cargarCitas();
+  });
+
   // ---------- Consultorio ----------
   var mapa = p.ubicacion_gps ? '<a href="' + esc(p.ubicacion_gps) + '" target="_blank" rel="noopener">Ver en el mapa</a>' : '<span class="ayuda">Sin ubicación en el mapa</span>';
   $('consultorio').innerHTML = dato('Nombre', esc(p.consultorio)) +
