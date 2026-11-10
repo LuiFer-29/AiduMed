@@ -12,7 +12,7 @@ const esc = (t: unknown) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "
 const cuando = (c: Cita) => { const i = new Date(c.inicio); return `${fechaLarga(fechaLocal(i))}, ${hora12(i)}`; };
 const telefonoBonito = (t: string) => t.startsWith("504") && t.length === 11 ? `+504 ${t.slice(3, 7)}-${t.slice(7)}` : `+${t}`;
 
-function html(titulo: string, filas: [string, string][], nota?: string): string {
+function html(titulo: string, filas: [string, string][], nota?: string, boton: [string, string] = ["Ver mis citas", "https://aidumed.app/mi-perfil"], pie = "Aviso automático de su asistente de citas · Aidú Med"): string {
   const tabla = filas.map(([k, v]) =>
     `<tr><td style="padding:6px 12px 6px 0;font-size:14px;color:#4A5A57;white-space:nowrap;vertical-align:top;">${esc(k)}</td><td style="padding:6px 0;font-size:15px;font-weight:bold;color:#10211F;">${v}</td></tr>`).join("");
   return `<div style="margin:0;padding:24px 12px;background:#F6F7F4;font-family:Arial,Helvetica,sans-serif;color:#10211F;">
@@ -23,12 +23,30 @@ function html(titulo: string, filas: [string, string][], nota?: string): string 
       <table role="presentation" cellpadding="0" cellspacing="0">${tabla}</table>
       ${nota ? `<p style="margin:18px 0 0;font-size:14px;line-height:1.6;color:#4A5A57;">${esc(nota)}</p>` : ""}
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:22px;"><tr><td style="background:#0B6E5F;border-radius:10px;">
-        <a href="https://aidumed.app/mi-perfil" style="display:inline-block;padding:12px 24px;font-size:15px;font-weight:bold;color:#FFFFFF;text-decoration:none;">Ver mis citas</a>
+        <a href="${boton[1]}" style="display:inline-block;padding:12px 24px;font-size:15px;font-weight:bold;color:#FFFFFF;text-decoration:none;">${esc(boton[0])}</a>
       </td></tr></table>
     </td></tr>
-    <tr><td style="padding:22px 28px 26px;"><p style="margin:0;padding-top:16px;border-top:1px solid #DCE3E0;font-size:12px;line-height:1.6;color:#4A5A57;">Aviso automático de su asistente de citas · Aidú Med</p></td></tr>
+    <tr><td style="padding:22px 28px 26px;"><p style="margin:0;padding-top:16px;border-top:1px solid #DCE3E0;font-size:12px;line-height:1.6;color:#4A5A57;">${esc(pie)}</p></td></tr>
   </table>
 </div>`;
+}
+
+/** Al administrador: un médico subió una foto de perfil nueva. */
+export async function avisarFotoPendiente(m: Medico, urlFoto: string) {
+  const nombre = [m.titulo, m.nombre].filter(Boolean).join(" ") || m.correo || "Un médico";
+  try {
+    const r = await transporte.sendMail({
+      from: '"Aidú Med" <hola@aidu.pro>', to: "suscripciones@aidu.pro",
+      subject: `Foto nueva por aprobar: ${nombre}`,
+      html: html("Foto de perfil por aprobar", [["Médico", esc(nombre)], ["Correo", esc(m.correo || "—")],
+        ["Foto nueva", `<img src="${esc(urlFoto)}" alt="" width="160" style="display:block;width:160px;height:160px;object-fit:cover;border-radius:999px;border:1px solid #DCE3E0;">`]],
+        "La foto no se muestra hasta que usted la apruebe en el panel de administración.", ["Revisar en el panel", "https://aidumed.app/admin?fotos=1"], "Aviso interno · Aidú Med"),
+      text: `Foto nueva por aprobar: ${nombre}. Revísela en https://aidumed.app/admin?fotos=1`,
+    });
+    console.log(`Correo enviado: foto por aprobar → suscripciones@aidu.pro (${r.response || r.messageId})`);
+  } catch (e) {
+    console.error("Correo", e);
+  }
 }
 
 export function crearAvisos(prueba: boolean): Avisos {

@@ -18,7 +18,7 @@ export type Entrada = { telefono: string; nombrePerfil?: string; texto?: string;
 export type Medico = Perfil & {
   id: string; codigo?: string | null; estado: string; correo?: string | null;
   titulo?: string | null; nombre?: string | null; especialidad?: string | null; especialidad_otra?: string | null;
-  consultorio?: string | null; direccion?: string | null; ubicacion_gps?: string | null;
+  consultorio?: string | null; numero_consultorio?: string | null; direccion?: string | null; ubicacion_gps?: string | null;
   whatsapp_consultorio?: string | null; whatsapp_secretaria?: string | null; derivar_a?: string | null;
   telefono_consultorio?: string | null; servicios?: Servicio[] | null; descripcion?: string | null;
 };
@@ -71,6 +71,9 @@ export type Dependencias = {
 export const corto = (t: string, n: number) => (t.length > n ? t.slice(0, n - 1).trimEnd() + "…" : t);
 const sinAcentos = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "");
 const nombreMedico = (m: Medico) => [m.titulo, m.nombre].filter(Boolean).join(" ");
+/** "Consultorio 204 · Clínica Sonrisa, Barrio El Centro" */
+export const lugarMedico = (m: Medico) =>
+  [[m.numero_consultorio ? `Consultorio ${m.numero_consultorio}` : "", m.consultorio].filter(Boolean).join(" · "), m.direccion].filter(Boolean).join(", ");
 const especialidad = (m: Medico) => (m.especialidad === "Otra" ? m.especialidad_otra : m.especialidad) || "";
 const lempiras = (p?: string | number | null) => {
   const n = Number(String(p ?? "").replace(/\D/g, ""));
@@ -523,7 +526,7 @@ class Sesion {
       `🩺 ${serv.nombre}${serv.duracion ? ` (${serv.duracion})` : ""}${lempiras(serv.precio) ? ` · ${lempiras(serv.precio)}` : ""}`,
       `👤 ${this.datos.nombre}`,
       `👨‍⚕️ ${nombreMedico(m)}`,
-      m.direccion ? `📍 ${[m.consultorio, m.direccion].filter(Boolean).join(", ")}` : "",
+      m.direccion || m.consultorio ? `📍 ${lugarMedico(m)}` : "",
     ].filter(Boolean).join("\n");
   }
 

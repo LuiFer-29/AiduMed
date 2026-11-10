@@ -73,6 +73,7 @@ create policy "editar perfil propio o admin" on public.medicos for update to aut
   with check (id = auth.uid() or public.es_admin());
 
 -- El médico no puede cambiar su estado (salvo enviar a revisión) ni las notas del administrador.
+-- (La foto con aprobación y las columnas nuevas están en panel.sql.)
 create or replace function public.medicos_al_crear() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
@@ -98,9 +99,23 @@ begin
   new.id := old.id;
   new.correo := old.correo;
   new.created_at := old.created_at;
-  if public.es_admin() and old.id <> auth.uid() then
-    if new.estado is distinct from old.estado then new.revisado_at := now(); end if;
-    return new;
+  if public.es_admin() then
+    if old.id <> auth.uid() then
+      if new.estado is distinct from old.estado then new.revisado_at := now(); end if;
+      return new;
+    end if;
+  elsif old.estado in ('aprobado', 'activo', 'pausado') then
+    if new.foto_path is distinct from old.foto_path then
+      new.foto_pendiente_path := new.foto_path;
+      new.foto_path := old.foto_path;
+    end if;
+  end if;
+  if not public.es_admin() then
+    if new.foto_pendiente_path is distinct from old.foto_pendiente_path and new.foto_pendiente_path is not null then
+      new.foto_rechazada_at := null;
+    else
+      new.foto_rechazada_at := old.foto_rechazada_at;
+    end if;
   end if;
   if new.estado is distinct from old.estado then
     if old.estado in ('borrador', 'rechazado') and new.estado = 'en_revision' then

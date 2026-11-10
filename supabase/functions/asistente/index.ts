@@ -3,13 +3,15 @@
 //  POST /asistente            → mensajes de WhatsApp (firma de Meta obligatoria)
 //  POST /asistente/simular    → simulador del panel de administración (sesión de administrador)
 //  POST /asistente/recordatorios → recordatorios de citas (día anterior, 5:30–11:30 p. m., pg_cron; clave interna)
-//  POST /asistente/evento     → avisos al paciente (p. ej. el consultorio canceló; trigger; clave interna)
+//  POST /asistente/evento     → avisos (el consultorio canceló, foto nueva por aprobar; trigger; clave interna)
+//  POST /asistente/panel      → acciones del panel del médico (sesión del médico): días cerrados y "Atender"
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { crearAvisos } from "./correo.ts";
+import { avisarFotoPendiente, crearAvisos } from "./correo.ts";
 import { crearAlmacen } from "./datos.ts";
 import { atender, type Cita, type Medico, type Salida } from "./flujo.ts";
 import { crearCerebro } from "./ia.ts";
-import { canceladaPorConsultorio, recordatorio } from "./plantillas.ts";
+import { canceladaPorConsultorio, recordatorio, turnoListo, turnoListoTexto } from "./plantillas.ts";
+import { rangosLibres, type Rango } from "./disponibilidad.ts";
 import { fechaLocal, instante, minutosLocales, sumarDias } from "./tiempo.ts";
 import { cargaUtil, enviar, firmaValida, leerNotificacion, marcarLeido } from "./whatsapp.ts";
 
@@ -46,6 +48,7 @@ Deno.serve(async (req) => {
   }
 
   if (req.method === "POST" && ruta === "simular") return simular(req);
+  if (req.method === "POST" && ruta === "panel") return panel(req);
   if (req.method === "POST" && (ruta === "recordatorios" || ruta === "evento" || ruta === "meta")) {
     if (req.headers.get("x-aviso-secreto") !== Deno.env.get("AVISO_SECRETO")) return new Response("No autorizado", { status: 401 });
     return ruta === "recordatorios" ? recordatorios() : ruta === "evento" ? evento(req) : meta(req);
@@ -138,7 +141,14 @@ async function recordatorios(): Promise<Response> {
 }
 
 async function evento(req: Request): Promise<Response> {
-  const { tipo, cita_id } = await req.json().catch(() => ({}));
+  const { tipo, cita_id, medico_id } = await req.json().catch(() => ({}));
+  if (tipo === "foto_pendiente" && medico_id) {
+    const m = await sb.from("medicos").select("*").eq("id", medico_id).maybeSingle();
+    if (!m.data?.foto_pendiente_path) return new Response("Sin foto");
+    const firmada = await sb.storage.from("fotos").createSignedUrl(m.data.foto_pendiente_path, 7 * 86400);
+    await avisarFotoPendiente(m.data as Medico, firmada.data?.signedUrl || "");
+    return new Response("Avisado");
+  }
   if (tipo !== "cancelada_consultorio" || !cita_id) return new Response("Sin acción");
   const r = await sb.from("citas").select("*, pacientes(telefono), medicos(*)").eq("id", cita_id).maybeSingle();
   const tel = r.data?.pacientes?.telefono as string | undefined;
@@ -149,10 +159,68 @@ async function evento(req: Request): Promise<Response> {
   return new Response(id ? "Enviado" : "Error al enviar");
 }
 
+// ---------- Panel del médico ----------
+async function panel(req: Request): Promise<Response> {
+  const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  const u = await sb.auth.getUser(token);
+  if (u.error || !u.data.user) return json(req, { error: "Inicie sesión de nuevo." }, 401);
+  const uid = u.data.user.id;
+  const cuerpo = await req.json().catch(() => ({}));
+  const med = await sb.from("medicos").select("*").eq("id", uid).maybeSingle();
+  if (!med.data) return json(req, { error: "No encontramos su perfil." }, 404);
+  const m = med.data as Medico;
+
+  // Días en que el consultorio no atiende por vacaciones, feriados o días libres (para "Mis citas").
+  if (cuerpo.accion === "cerrados") {
+    const desde = String(cuerpo.desde || ""), hasta = String(cuerpo.hasta || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta) || hasta < desde) return json(req, { error: "Fechas no válidas" }, 400);
+    const feriados = await almacen.feriados();
+    const rangos = rangosLibres(m, feriados, Number(desde.slice(0, 4)));
+    const propias = (m.otras_vacaciones || []) as (Rango & { origen?: string })[];
+    const dias: { fecha: string; etiqueta: string }[] = [];
+    for (let f = desde, n = 0; f <= hasta && n < 120; f = sumarDias(f, 1), n++) {
+      const o = propias.find((x) => f >= x.desde && f <= (x.hasta || x.desde));
+      const r = rangos.find((x) => f >= x.desde && f <= x.hasta);
+      if (!o && !r) continue;
+      const etiqueta = o
+        ? (o.origen === "cerrado" ? (o.motivo ? `Consultorio cerrado: ${o.motivo}` : "Consultorio cerrado") : (o.motivo ? `Vacaciones: ${o.motivo}` : "Vacaciones"))
+        : feriados.some((x) => x.nombre === r!.nombre) ? `Feriado: ${r!.nombre}` : `Vacaciones: ${r!.nombre}`;
+      dias.push({ fecha: f, etiqueta });
+    }
+    return json(req, { dias });
+  }
+
+  // "Atender": avisa al paciente que el médico está listo.
+  if (cuerpo.accion === "atender") {
+    const r = await sb.from("citas").select("*, pacientes(telefono)").eq("id", String(cuerpo.cita_id || "")).eq("medico_id", uid).maybeSingle();
+    if (!r.data) return json(req, { error: "No encontramos esa cita." }, 404);
+    if (r.data.estado !== "confirmada") return json(req, { error: "La cita ya no está confirmada." }, 400);
+    const tel = r.data.pacientes?.telefono as string | undefined;
+    const ahora = new Date().toISOString();
+    if (!tel) return json(req, { error: "La cita no tiene número de WhatsApp." }, 400);
+    if (esSimulado(tel)) {
+      await sb.from("citas").update({ llamado_at: ahora }).eq("id", r.data.id);
+      return json(req, { ok: true, via: "prueba", llamado_at: ahora });
+    }
+    if (!whatsappListo()) return json(req, { error: "WhatsApp no está configurado todavía." }, 503);
+    // Si el paciente escribió en las últimas 24 h, WhatsApp permite texto libre (gratis); si no, plantilla.
+    const ult = await sb.from("mensajes").select("creado_at").eq("telefono", tel).eq("direccion", "entrante")
+      .gte("creado_at", new Date(Date.now() - 23.5 * 3600_000).toISOString()).limit(1);
+    const enVentana = !!ult.data?.length;
+    const carga = enVentana ? cargaUtil(tel, { tipo: "texto", texto: turnoListoTexto(r.data as Cita, m) }) : turnoListo(tel, r.data as Cita, m);
+    const id = await enviar(tel, carga);
+    await almacen.registrar(tel, "saliente", carga, id);
+    if (!id) return json(req, { error: "WhatsApp no aceptó el mensaje. Intente de nuevo en un momento." }, 502);
+    await sb.from("citas").update({ llamado_at: ahora }).eq("id", r.data.id);
+    return json(req, { ok: true, via: enVentana ? "texto" : "plantilla", llamado_at: ahora });
+  }
+  return json(req, { error: "Acción no válida" }, 400);
+}
+
 // ---------- Mantenimiento con Meta (uso interno) ----------
 // Suscribe la cuenta de WhatsApp Business a esta app para que Meta entregue los mensajes al webhook.
 async function meta(req: Request): Promise<Response> {
-  const { accion, waba } = await req.json().catch(() => ({}));
+  const { accion, waba, solo } = await req.json().catch(() => ({}));
   if (!/^\d+$/.test(String(waba || ""))) return new Response("Falta waba", { status: 400 });
   const version = Deno.env.get("WA_API_VERSION") || "v25.0";
   const url = `https://graph.facebook.com/${version}/${waba}/subscribed_apps`;
@@ -161,7 +229,7 @@ async function meta(req: Request): Promise<Response> {
   if (accion === "plantillas" || accion === "ver_plantillas") {
     const creadas: unknown[] = [];
     if (accion === "plantillas") {
-      for (const p of PLANTILLAS) {
+      for (const p of PLANTILLAS.filter((x) => !solo || x.name === solo)) {
         const r = await fetch(`${base}/message_templates`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify(p) });
         creadas.push({ nombre: p.name, respuesta: await r.json().catch(() => ({ status: r.status })) });
       }
@@ -203,6 +271,17 @@ const PLANTILLAS = [
       },
       { type: "FOOTER", text: "Aidú Med · Asistente de citas" },
       { type: "BUTTONS", buttons: [{ type: "QUICK_REPLY", text: "Elegir otra fecha" }] },
+    ],
+  },
+  {
+    name: "turno_listo", language: "es", category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text: "Hola {{1}}, {{2}} ya puede atenderte. Por favor, dirígete a: *{{3}}*. ¡Te esperamos!",
+        example: { body_text: [["María", "el Dr. Luis Espinoza", "Consultorio 204"]] },
+      },
+      { type: "FOOTER", text: "Aidú Med · Asistente de citas" },
     ],
   },
 ];

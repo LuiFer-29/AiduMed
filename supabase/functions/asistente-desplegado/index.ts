@@ -68,7 +68,7 @@ var cuando = (c) => {
   return `${fechaLarga(fechaLocal(i))}, ${hora12(i)}`;
 };
 var telefonoBonito = (t) => t.startsWith("504") && t.length === 11 ? `+504 ${t.slice(3, 7)}-${t.slice(7)}` : `+${t}`;
-function html(titulo, filas, nota) {
+function html(titulo, filas, nota, boton = ["Ver mis citas", "https://aidumed.app/mi-perfil"], pie = "Aviso autom\xE1tico de su asistente de citas \xB7 Aid\xFA Med") {
   const tabla = filas.map(([k, v]) => `<tr><td style="padding:6px 12px 6px 0;font-size:14px;color:#4A5A57;white-space:nowrap;vertical-align:top;">${esc(k)}</td><td style="padding:6px 0;font-size:15px;font-weight:bold;color:#10211F;">${v}</td></tr>`).join("");
   return `<div style="margin:0;padding:24px 12px;background:#F6F7F4;font-family:Arial,Helvetica,sans-serif;color:#10211F;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#FFFFFF;border:1px solid #DCE3E0;border-radius:14px;overflow:hidden;">
@@ -78,12 +78,37 @@ function html(titulo, filas, nota) {
       <table role="presentation" cellpadding="0" cellspacing="0">${tabla}</table>
       ${nota ? `<p style="margin:18px 0 0;font-size:14px;line-height:1.6;color:#4A5A57;">${esc(nota)}</p>` : ""}
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:22px;"><tr><td style="background:#0B6E5F;border-radius:10px;">
-        <a href="https://aidumed.app/mi-perfil" style="display:inline-block;padding:12px 24px;font-size:15px;font-weight:bold;color:#FFFFFF;text-decoration:none;">Ver mis citas</a>
+        <a href="${boton[1]}" style="display:inline-block;padding:12px 24px;font-size:15px;font-weight:bold;color:#FFFFFF;text-decoration:none;">${esc(boton[0])}</a>
       </td></tr></table>
     </td></tr>
-    <tr><td style="padding:22px 28px 26px;"><p style="margin:0;padding-top:16px;border-top:1px solid #DCE3E0;font-size:12px;line-height:1.6;color:#4A5A57;">Aviso autom\xE1tico de su asistente de citas \xB7 Aid\xFA Med</p></td></tr>
+    <tr><td style="padding:22px 28px 26px;"><p style="margin:0;padding-top:16px;border-top:1px solid #DCE3E0;font-size:12px;line-height:1.6;color:#4A5A57;">${esc(pie)}</p></td></tr>
   </table>
 </div>`;
+}
+async function avisarFotoPendiente(m, urlFoto) {
+  const nombre = [m.titulo, m.nombre].filter(Boolean).join(" ") || m.correo || "Un m\xE9dico";
+  try {
+    const r = await transporte.sendMail({
+      from: '"Aid\xFA Med" <hola@aidu.pro>',
+      to: "suscripciones@aidu.pro",
+      subject: `Foto nueva por aprobar: ${nombre}`,
+      html: html(
+        "Foto de perfil por aprobar",
+        [
+          ["M\xE9dico", esc(nombre)],
+          ["Correo", esc(m.correo || "\u2014")],
+          ["Foto nueva", `<img src="${esc(urlFoto)}" alt="" width="160" style="display:block;width:160px;height:160px;object-fit:cover;border-radius:999px;border:1px solid #DCE3E0;">`]
+        ],
+        "La foto no se muestra hasta que usted la apruebe en el panel de administraci\xF3n.",
+        ["Revisar en el panel", "https://aidumed.app/admin?fotos=1"],
+        "Aviso interno \xB7 Aid\xFA Med"
+      ),
+      text: `Foto nueva por aprobar: ${nombre}. Rev\xEDsela en https://aidumed.app/admin?fotos=1`
+    });
+    console.log(`Correo enviado: foto por aprobar \u2192 suscripciones@aidu.pro (${r.response || r.messageId})`);
+  } catch (e) {
+    console.error("Correo", e);
+  }
 }
 function crearAvisos(prueba) {
   const prefijo = prueba ? "[Prueba] " : "";
@@ -310,6 +335,7 @@ function motivoSinHorario(p, fecha, feriados, ahora) {
 var corto = (t, n) => t.length > n ? t.slice(0, n - 1).trimEnd() + "\u2026" : t;
 var sinAcentos2 = (t) => t.normalize("NFD").replace(/[̀-ͯ]/g, "");
 var nombreMedico = (m) => [m.titulo, m.nombre].filter(Boolean).join(" ");
+var lugarMedico = (m) => [[m.numero_consultorio ? `Consultorio ${m.numero_consultorio}` : "", m.consultorio].filter(Boolean).join(" \xB7 "), m.direccion].filter(Boolean).join(", ");
 var especialidad = (m) => (m.especialidad === "Otra" ? m.especialidad_otra : m.especialidad) || "";
 var lempiras = (p) => {
   const n = Number(String(p ?? "").replace(/\D/g, ""));
@@ -744,7 +770,7 @@ var Sesion = class {
       `\u{1FA7A} ${serv.nombre}${serv.duracion ? ` (${serv.duracion})` : ""}${lempiras(serv.precio) ? ` \xB7 ${lempiras(serv.precio)}` : ""}`,
       `\u{1F464} ${this.datos.nombre}`,
       `\u{1F468}\u200D\u2695\uFE0F ${nombreMedico(m)}`,
-      m.direccion ? `\u{1F4CD} ${[m.consultorio, m.direccion].filter(Boolean).join(", ")}` : ""
+      m.direccion || m.consultorio ? `\u{1F4CD} ${lugarMedico(m)}` : ""
     ].filter(Boolean).join("\n");
   }
   confirmar() {
@@ -1102,7 +1128,7 @@ function recordatorio(para, c, m) {
             texto(limpio(nombreMedico2(m))),
             texto(limpio(fechaLarga(fechaLocal(i)).toLowerCase())),
             texto(limpio(hora12(i))),
-            texto(limpio([m.consultorio, m.direccion].filter(Boolean).join(", "), 120))
+            texto(limpio(lugarMedico(m), 120))
           ]
         },
         respuesta(0, `rec:si:${c.id}`),
@@ -1135,6 +1161,41 @@ function canceladaPorConsultorio(para, c, m) {
       ]
     }
   };
+}
+function conArticulo(m) {
+  const n = nombreMedico2(m);
+  return m.titulo === "Dra." ? `la ${n}` : m.titulo === "Dr." ? `el ${n}` : n;
+}
+function destino(m) {
+  return m.numero_consultorio ? `Consultorio ${m.numero_consultorio}` : m.consultorio || "el consultorio";
+}
+function turnoListo(para, c, m) {
+  return {
+    messaging_product: "whatsapp",
+    to: para,
+    type: "template",
+    template: {
+      name: "turno_listo",
+      language: { code: "es" },
+      components: [{
+        type: "body",
+        parameters: [
+          texto(limpio(primerNombre(c.nombre_paciente) || "hola", 40)),
+          texto(limpio(conArticulo(m))),
+          texto(limpio(destino(m), 80))
+        ]
+      }]
+    }
+  };
+}
+function turnoListoTexto(c, m) {
+  const quien = conArticulo(m);
+  const listo = m.titulo === "Dra." ? "lista" : "listo";
+  const nombre = primerNombre(c.nombre_paciente);
+  const a = m.numero_consultorio ? `al *Consultorio ${m.numero_consultorio}*` : m.consultorio ? `a *${m.consultorio}*` : "al consultorio";
+  return `Hola${nombre ? ` ${nombre}` : ""} \u{1F44B}
+
+${quien.charAt(0).toUpperCase() + quien.slice(1)} est\xE1 ${listo} para atenderte. Por favor, dir\xEDgete ${a}.`;
 }
 
 // whatsapp.ts
@@ -1259,6 +1320,7 @@ Deno.serve(async (req) => {
     return new Response("No autorizado", { status: 403 });
   }
   if (req.method === "POST" && ruta === "simular") return simular(req);
+  if (req.method === "POST" && ruta === "panel") return panel(req);
   if (req.method === "POST" && (ruta === "recordatorios" || ruta === "evento" || ruta === "meta")) {
     if (req.headers.get("x-aviso-secreto") !== Deno.env.get("AVISO_SECRETO")) return new Response("No autorizado", { status: 401 });
     return ruta === "recordatorios" ? recordatorios() : ruta === "evento" ? evento(req) : meta(req);
@@ -1346,7 +1408,14 @@ async function recordatorios() {
   return new Response(JSON.stringify({ enviados, pendientes }), { headers: { "content-type": "application/json" } });
 }
 async function evento(req) {
-  const { tipo, cita_id } = await req.json().catch(() => ({}));
+  const { tipo, cita_id, medico_id } = await req.json().catch(() => ({}));
+  if (tipo === "foto_pendiente" && medico_id) {
+    const m = await sb.from("medicos").select("*").eq("id", medico_id).maybeSingle();
+    if (!m.data?.foto_pendiente_path) return new Response("Sin foto");
+    const firmada = await sb.storage.from("fotos").createSignedUrl(m.data.foto_pendiente_path, 7 * 86400);
+    await avisarFotoPendiente(m.data, firmada.data?.signedUrl || "");
+    return new Response("Avisado");
+  }
   if (tipo !== "cancelada_consultorio" || !cita_id) return new Response("Sin acci\xF3n");
   const r = await sb.from("citas").select("*, pacientes(telefono), medicos(*)").eq("id", cita_id).maybeSingle();
   const tel = r.data?.pacientes?.telefono;
@@ -1356,8 +1425,56 @@ async function evento(req) {
   await almacen.registrar(tel, "saliente", carga, id);
   return new Response(id ? "Enviado" : "Error al enviar");
 }
+async function panel(req) {
+  const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  const u = await sb.auth.getUser(token);
+  if (u.error || !u.data.user) return json(req, { error: "Inicie sesi\xF3n de nuevo." }, 401);
+  const uid = u.data.user.id;
+  const cuerpo = await req.json().catch(() => ({}));
+  const med = await sb.from("medicos").select("*").eq("id", uid).maybeSingle();
+  if (!med.data) return json(req, { error: "No encontramos su perfil." }, 404);
+  const m = med.data;
+  if (cuerpo.accion === "cerrados") {
+    const desde = String(cuerpo.desde || ""), hasta = String(cuerpo.hasta || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta) || hasta < desde) return json(req, { error: "Fechas no v\xE1lidas" }, 400);
+    const feriados = await almacen.feriados();
+    const rangos = rangosLibres(m, feriados, Number(desde.slice(0, 4)));
+    const propias = m.otras_vacaciones || [];
+    const dias = [];
+    for (let f = desde, n = 0; f <= hasta && n < 120; f = sumarDias(f, 1), n++) {
+      const o = propias.find((x) => f >= x.desde && f <= (x.hasta || x.desde));
+      const r = rangos.find((x) => f >= x.desde && f <= x.hasta);
+      if (!o && !r) continue;
+      const etiqueta = o ? o.origen === "cerrado" ? o.motivo ? `Consultorio cerrado: ${o.motivo}` : "Consultorio cerrado" : o.motivo ? `Vacaciones: ${o.motivo}` : "Vacaciones" : feriados.some((x) => x.nombre === r.nombre) ? `Feriado: ${r.nombre}` : `Vacaciones: ${r.nombre}`;
+      dias.push({ fecha: f, etiqueta });
+    }
+    return json(req, { dias });
+  }
+  if (cuerpo.accion === "atender") {
+    const r = await sb.from("citas").select("*, pacientes(telefono)").eq("id", String(cuerpo.cita_id || "")).eq("medico_id", uid).maybeSingle();
+    if (!r.data) return json(req, { error: "No encontramos esa cita." }, 404);
+    if (r.data.estado !== "confirmada") return json(req, { error: "La cita ya no est\xE1 confirmada." }, 400);
+    const tel = r.data.pacientes?.telefono;
+    const ahora = (/* @__PURE__ */ new Date()).toISOString();
+    if (!tel) return json(req, { error: "La cita no tiene n\xFAmero de WhatsApp." }, 400);
+    if (esSimulado(tel)) {
+      await sb.from("citas").update({ llamado_at: ahora }).eq("id", r.data.id);
+      return json(req, { ok: true, via: "prueba", llamado_at: ahora });
+    }
+    if (!whatsappListo()) return json(req, { error: "WhatsApp no est\xE1 configurado todav\xEDa." }, 503);
+    const ult = await sb.from("mensajes").select("creado_at").eq("telefono", tel).eq("direccion", "entrante").gte("creado_at", new Date(Date.now() - 23.5 * 36e5).toISOString()).limit(1);
+    const enVentana = !!ult.data?.length;
+    const carga = enVentana ? cargaUtil(tel, { tipo: "texto", texto: turnoListoTexto(r.data, m) }) : turnoListo(tel, r.data, m);
+    const id = await enviar(tel, carga);
+    await almacen.registrar(tel, "saliente", carga, id);
+    if (!id) return json(req, { error: "WhatsApp no acept\xF3 el mensaje. Intente de nuevo en un momento." }, 502);
+    await sb.from("citas").update({ llamado_at: ahora }).eq("id", r.data.id);
+    return json(req, { ok: true, via: enVentana ? "texto" : "plantilla", llamado_at: ahora });
+  }
+  return json(req, { error: "Acci\xF3n no v\xE1lida" }, 400);
+}
 async function meta(req) {
-  const { accion, waba } = await req.json().catch(() => ({}));
+  const { accion, waba, solo } = await req.json().catch(() => ({}));
   if (!/^\d+$/.test(String(waba || ""))) return new Response("Falta waba", { status: 400 });
   const version = Deno.env.get("WA_API_VERSION") || "v25.0";
   const url = `https://graph.facebook.com/${version}/${waba}/subscribed_apps`;
@@ -1366,7 +1483,7 @@ async function meta(req) {
   if (accion === "plantillas" || accion === "ver_plantillas") {
     const creadas = [];
     if (accion === "plantillas") {
-      for (const p of PLANTILLAS) {
+      for (const p of PLANTILLAS.filter((x) => !solo || x.name === solo)) {
         const r = await fetch(`${base}/message_templates`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify(p) });
         creadas.push({ nombre: p.name, respuesta: await r.json().catch(() => ({ status: r.status })) });
       }
@@ -1410,6 +1527,19 @@ var PLANTILLAS = [
       },
       { type: "FOOTER", text: "Aid\xFA Med \xB7 Asistente de citas" },
       { type: "BUTTONS", buttons: [{ type: "QUICK_REPLY", text: "Elegir otra fecha" }] }
+    ]
+  },
+  {
+    name: "turno_listo",
+    language: "es",
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text: "Hola {{1}}, {{2}} ya puede atenderte. Por favor, dir\xEDgete a: *{{3}}*. \xA1Te esperamos!",
+        example: { body_text: [["Mar\xEDa", "el Dr. Luis Espinoza", "Consultorio 204"]] }
+      },
+      { type: "FOOTER", text: "Aid\xFA Med \xB7 Asistente de citas" }
     ]
   }
 ];
