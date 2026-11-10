@@ -301,3 +301,7 @@ figcaption .enlace-boton { padding: 0; font-size: 13px; }
 @media (max-width: 560px) { .cita { grid-template-columns: 84px minmax(0, 1fr); } }
 /* Botones de "Cambiar foto" y "Cambiar contraseña" a la misma altura */
 .cuenta-mitad > .boton { margin-top: auto; }
+.dia-cerrado.con-citas { flex-wrap: wrap; }
+.dia-cerrado.con-citas > span:first-of-type { flex: 1; min-width: 200px; }
+.dia-cerrado .mini.peligro { background: var(--blanco); }
+.confirmar-dia { flex-wrap: wrap; align-items: center; }

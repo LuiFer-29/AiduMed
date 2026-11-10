@@ -409,7 +409,7 @@
       var cerrado = cerrados[d];
       var cab = '<h3>' + esc(fechaTitulo(d)) + '</h3>';
       if (cerrado && !grupos[d].length) return '<div class="dia-citas">' + cab + '<div class="dia-cerrado">' + ICONO_SOL + '<span>' + esc(cerrado) + '</span></div></div>';
-      return '<div class="dia-citas">' + cab + (cerrado ? '<div class="dia-cerrado con-citas">' + ICONO_SOL + '<span>' + esc(cerrado) + ' · todavía tiene citas este día</span></div>' : '') + '<ul>' + grupos[d].map(function (c) {
+      return '<div class="dia-citas">' + cab + (cerrado ? '<div class="dia-cerrado con-citas">' + ICONO_SOL + '<span>' + esc(cerrado) + ' (todavía tiene citas este día)</span>' + (vista === 'proximas' ? '<button type="button" class="mini peligro" data-cancelar-dia="' + d + '">Cancelar las citas de este día</button>' : '') + '</div>' : '') + '<ul>' + grupos[d].map(function (c) {
         var tel = c.pacientes && c.pacientes.telefono, real = tel && !/^sim/.test(tel);
         var deHoy = d === hoy && vista === 'proximas' && c.estado === 'confirmada';
         return '<li class="cita' + (c.estado === 'cancelada' ? ' cancelada' : '') + '">' +
@@ -424,6 +424,22 @@
     }).join('');
     $('lista-citas').querySelectorAll('[data-cancelar]').forEach(function (b) {
       b.addEventListener('click', function () { confirmarCancelacion(b); });
+    });
+    $('lista-citas').querySelectorAll('[data-cancelar-dia]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var caja = b.parentNode, dia = b.dataset.cancelarDia, n = citasDelDia(dia).length;
+        b.remove();
+        var q = document.createElement('span'); q.className = 'acciones-cita confirmar-dia';
+        q.innerHTML = '<span class="pregunta-cancelar">¿Cancelar ' + n + (n === 1 ? ' cita' : ' citas') + ' y avisar a los pacientes?</span><button type="button" class="mini peligro" data-si>Sí, cancelar</button><button type="button" class="mini" data-no>No</button>';
+        caja.appendChild(q);
+        q.querySelector('[data-no]').addEventListener('click', function () { pintarCitas(); });
+        q.querySelector('[data-si]').addEventListener('click', async function () {
+          this.disabled = true;
+          var r = await App.sb.rpc('cancelar_citas_fechas', { p_desde: dia, p_hasta: dia });
+          if (r.error) { alert('No se pudo cancelar: ' + App.traducirError(r.error)); pintarCitas(); return; }
+          cargarCitas();
+        });
+      });
     });
     $('lista-citas').querySelectorAll('[data-atender]').forEach(function (b) {
       b.addEventListener('click', async function () {

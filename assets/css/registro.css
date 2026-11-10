@@ -142,3 +142,17 @@ body.registro { background: #E9EEEB; min-height: 100vh; }
 .cuenta-activa[hidden] { display: none; }
 .cuenta-activa .enlace-boton { align-self: auto; font-size: 14px; }
 @media (max-width: 680px) { .cuenta-activa { margin: 12px 16px 0; } }
+/* Diálogo: vacaciones sobre fechas con citas */
+.dialogo-fondo { position: fixed; inset: 0; z-index: 50; background: rgba(16,33,31,.5); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.dialogo { width: min(520px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; background: #FFFFFF; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 20px 60px rgba(16,33,31,.25); }
+.dialogo h2 { margin: 0; font-size: 21px; line-height: 1.25; }
+.dialogo p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--texto-2); }
+.dialogo ul { list-style: none; margin: 0; padding: 0; border: 1px solid var(--borde); border-radius: 12px; }
+.dialogo li { padding: 10px 14px; font-size: 14px; border-bottom: 1px solid var(--borde); }
+.dialogo li:last-child { border-bottom: none; }
+.dialogo li.mas { color: var(--texto-2); }
+.dialogo-botones { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.dialogo-botones .boton { width: 100%; }
+.dialogo .ayuda { font-size: 13px; }
+.boton-peligro-lleno { background: #B42318; border-color: #B42318; color: #FFFFFF; }
+.boton-peligro-lleno:hover { background: #912018; border-color: #912018; color: #FFFFFF; }

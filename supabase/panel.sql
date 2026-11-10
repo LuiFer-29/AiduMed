@@ -96,3 +96,20 @@ grant execute on function public.cancelar_dia(date, text) to authenticated;
 -- Anticipación mínima para agendar, en minutos (la elige cada médico; obligatoria en el registro).
 alter table public.medicos add column if not exists aviso_minimo_min integer
   check (aviso_minimo_min in (30, 60, 120, 240, 1440));
+
+-- Cancela las citas confirmadas (futuras) del médico entre dos fechas, sin tocar sus días libres.
+-- Se usa al guardar vacaciones sobre fechas con citas y desde "Mis citas". Cada cancelación avisa al paciente.
+create or replace function public.cancelar_citas_fechas(p_desde date, p_hasta date) returns integer
+language plpgsql security definer set search_path = public as $$
+declare n integer;
+begin
+  if auth.uid() is null then raise exception 'Inicie sesión de nuevo'; end if;
+  if p_hasta < p_desde then raise exception 'Fechas no válidas'; end if;
+  update public.citas set estado = 'cancelada', cancelada_por = 'consultorio', actualizada_at = now()
+  where medico_id = auth.uid() and estado = 'confirmada' and inicio > now()
+    and (inicio at time zone 'America/Tegucigalpa')::date between p_desde and p_hasta;
+  get diagnostics n = row_count;
+  return n;
+end $$;
+revoke all on function public.cancelar_citas_fechas(date, date) from public, anon;
+grant execute on function public.cancelar_citas_fechas(date, date) to authenticated;
