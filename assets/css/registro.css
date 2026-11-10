@@ -156,3 +156,5 @@ body.registro { background: #E9EEEB; min-height: 100vh; }
 .dialogo .ayuda { font-size: 13px; }
 .boton-peligro-lleno { background: #B42318; border-color: #B42318; color: #FFFFFF; }
 .boton-peligro-lleno:hover { background: #912018; border-color: #912018; color: #FFFFFF; }
+.boton-dos-lineas { flex-direction: column; gap: 2px; height: auto; padding-top: 10px; padding-bottom: 10px; }
+.boton-dos-lineas small { font-size: 12.5px; font-weight: 500; color: var(--texto-2); line-height: 1.35; }

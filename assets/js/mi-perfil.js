@@ -122,12 +122,13 @@
     $('vacaciones').innerHTML = vac.length ? vac.map(function (v) { return '<span class="chip">' + esc(v) + '</span>'; }).join('') : '<span class="ayuda">Sin vacaciones fijas.</span>';
     var otras = p.otras_vacaciones || [];
     var hoy = diaLocal(new Date());
+    // Solo fechas de hoy en adelante: las que ya pasaron desaparecen de la lista.
     $('otras-fechas').innerHTML = otras.map(function (r, i) {
-      var pasada = (r.hasta || r.desde) < hoy;
-      var motivo = r.motivo ? '<span class="fecha-motivo">' + esc(r.motivo) + '</span>' : (r.origen === 'cerrado' ? '<span class="fecha-motivo">Consultorio cerrado</span>' : '');
-      return '<li' + (pasada ? ' class="pasada"' : '') + '>' + ICONO_CAL + '<span class="fecha-texto">' + esc(App.rangoFechas({ desde: r.desde, hasta: r.hasta })) + motivo + '</span>' +
-        (pasada ? '<span class="ayuda">(ya pasó)</span>' : '<button type="button" class="papelera" data-borrar="' + i + '" aria-label="Eliminar ' + esc(App.rangoFechas(r)) + '" title="Eliminar">' + ICONO_BASURA + '</button>') + '</li>';
-    }).join('') + (p.otras_fechas && !otras.length ? '<li>' + esc(p.otras_fechas) + '</li>' : '');
+      if ((r.hasta || r.desde) < hoy) return '';
+      var motivo = r.motivo ? '<span class="fecha-motivo">' + esc(r.motivo) + '</span>' : '';
+      return '<li>' + ICONO_CAL + '<span class="fecha-texto">' + esc(App.rangoFechas({ desde: r.desde, hasta: r.hasta })) + motivo + '</span>' +
+        '<button type="button" class="papelera" data-borrar="' + i + '" aria-label="Eliminar ' + esc(App.rangoFechas({ desde: r.desde, hasta: r.hasta })) + '" title="Eliminar">' + ICONO_BASURA + '</button></li>';
+    }).join('');
     $('otras-fechas').querySelectorAll('[data-borrar]').forEach(function (b) {
       b.addEventListener('click', function () {
         var li = b.parentNode, i = +b.dataset.borrar, antes = li.innerHTML;
@@ -494,7 +495,7 @@
   }
   $('abrir-cerrar-dia').addEventListener('click', function () {
     var f = $('cerrar-dia'); f.hidden = !f.hidden;
-    if (!f.hidden) { $('cd-fecha').min = diaLocal(new Date()); $('cd-fecha').focus(); actualizarCerrarDia(); }
+    if (!f.hidden) { f.reset(); $('cd-error').hidden = true; $('cd-fecha').min = diaLocal(new Date()); $('cd-fecha').focus(); actualizarCerrarDia(); }
   });
   $('cd-volver').addEventListener('click', function () { $('cerrar-dia').reset(); $('cerrar-dia').hidden = true; });
   $('cd-fecha').addEventListener('change', actualizarCerrarDia);

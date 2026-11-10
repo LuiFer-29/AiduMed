@@ -289,7 +289,9 @@
     if (p.aviso_minimo_min) f.aviso_minimo_min.value = String(p.aviso_minimo_min);
     if (p.enviado_at || (p.vacaciones && p.vacaciones.length)) document.querySelectorAll('.tarjeta-opcion').forEach(function (d) { d.setAttribute('aria-pressed', (p.vacaciones || []).indexOf(d.dataset.vacacion) >= 0); });
     listaFechas.innerHTML = '';
-    (p.otras_vacaciones || []).forEach(function (v) { agregarFecha(v); });
+    // Las fechas que ya pasaron no se muestran; al guardar este paso quedan eliminadas.
+    var hoyLocal = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Tegucigalpa' }).format(new Date());
+    (p.otras_vacaciones || []).filter(function (v) { return (v.hasta || v.desde) >= hoyLocal; }).forEach(function (v) { agregarFecha(v); });
     var planGuardado = p.plan && form.querySelector('input[name="plan"][value="' + p.plan + '"]');
     if (planGuardado) planGuardado.checked = true;
     f.conectar_google_calendar.checked = !!p.conectar_google_calendar;
@@ -425,7 +427,7 @@
         (n > max ? '<li class="mas">y ' + (n - max) + ' más</li>' : '') + '</ul>' +
         '<div class="dialogo-botones">' +
           '<button type="button" class="boton boton-peligro-lleno" data-r="cancelar">Cancelarlas y avisar a los pacientes</button>' +
-          '<button type="button" class="boton boton-secundario" data-r="mantener">Mantenerlas</button>' +
+          '<button type="button" class="boton boton-secundario boton-dos-lineas" data-r="mantener">Mantenerlas<small>Usted deberá atender a esos pacientes en la fecha y hora agendadas.</small></button>' +
           '<button type="button" class="enlace-boton" data-r="volver">Volver a editar las fechas</button>' +
         '</div><p class="ayuda">Si las cancela, cada paciente recibe un mensaje por WhatsApp con el botón «Elegir otra fecha».</p></div>';
       document.body.appendChild(fondo);
