@@ -426,10 +426,10 @@
         '<ul>' + citas.slice(0, max).map(function (c) { return '<li><strong>' + App.escapar(cuando(c)) + '</strong> · ' + App.escapar(c.nombre_paciente || 'Paciente') + '</li>'; }).join('') +
         (n > max ? '<li class="mas">y ' + (n - max) + ' más</li>' : '') + '</ul>' +
         '<div class="dialogo-botones">' +
-          '<button type="button" class="boton boton-peligro-lleno" data-r="cancelar">Cancelarlas y avisar a los pacientes</button>' +
+          '<button type="button" class="boton boton-peligro-lleno boton-dos-lineas" data-r="cancelar">Cancelarlas y avisar a los pacientes<small>Les llegará un mensaje por WhatsApp para elegir otra fecha.</small></button>' +
           '<button type="button" class="boton boton-secundario boton-dos-lineas" data-r="mantener">Mantenerlas<small>Usted deberá atender a esos pacientes en la fecha y hora agendadas.</small></button>' +
           '<button type="button" class="enlace-boton" data-r="volver">Volver a editar las fechas</button>' +
-        '</div><p class="ayuda">Si las cancela, cada paciente recibe un mensaje por WhatsApp con el botón «Elegir otra fecha».</p></div>';
+        '</div></div>';
       document.body.appendChild(fondo);
       fondo.querySelector('[data-r="cancelar"]').focus();
       fondo.querySelectorAll('[data-r]').forEach(function (b) {
