@@ -1359,6 +1359,18 @@ async function meta(req) {
   const version = Deno.env.get("WA_API_VERSION") || "v25.0";
   const url = `https://graph.facebook.com/${version}/${waba}/subscribed_apps`;
   const auth = { authorization: `Bearer ${Deno.env.get("WA_TOKEN")}` };
+  const base = `https://graph.facebook.com/${version}/${waba}`;
+  if (accion === "plantillas" || accion === "ver_plantillas") {
+    const creadas = [];
+    if (accion === "plantillas") {
+      for (const p of PLANTILLAS) {
+        const r = await fetch(`${base}/message_templates`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify(p) });
+        creadas.push({ nombre: p.name, respuesta: await r.json().catch(() => ({ status: r.status })) });
+      }
+    }
+    const g2 = await fetch(`${base}/message_templates?fields=name,status,category,language,rejected_reason&limit=50`, { headers: auth });
+    return new Response(JSON.stringify({ creadas, plantillas: await g2.json().catch(() => ({})) }), { headers: { "content-type": "application/json" } });
+  }
   let suscribir = null;
   if (accion === "suscribir") {
     const r = await fetch(url, { method: "POST", headers: auth });
@@ -1368,3 +1380,33 @@ async function meta(req) {
   const apps = await g.json().catch(() => ({ status: g.status }));
   return new Response(JSON.stringify({ suscribir, apps }), { headers: { "content-type": "application/json" } });
 }
+var PLANTILLAS = [
+  {
+    name: "recordatorio_cita",
+    language: "es",
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text: "Hola {{1}}, te recordamos tu cita con {{2}} el {{3}} a las {{4}}. Lugar: {{5}}. \xBFNos confirmas tu asistencia?",
+        example: { body_text: [["Mar\xEDa", "Dr. Luis Espinoza", "martes 11 de noviembre", "10:00 a. m.", "Cl\xEDnica Sonrisa, Barrio El Centro, San Pedro Sula"]] }
+      },
+      { type: "FOOTER", text: "Aid\xFA Med \xB7 Asistente de citas" },
+      { type: "BUTTONS", buttons: [{ type: "QUICK_REPLY", text: "Confirmo" }, { type: "QUICK_REPLY", text: "Cambiar fecha" }, { type: "QUICK_REPLY", text: "Cancelar cita" }] }
+    ]
+  },
+  {
+    name: "cita_cancelada_consultorio",
+    language: "es",
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text: "Hola {{1}}, el consultorio de {{2}} tuvo que cancelar tu cita del {{3}} a las {{4}}. Lamentamos el inconveniente. \xBFQuieres elegir otra fecha?",
+        example: { body_text: [["Mar\xEDa", "Dr. Luis Espinoza", "martes 11 de noviembre", "10:00 a. m."]] }
+      },
+      { type: "FOOTER", text: "Aid\xFA Med \xB7 Asistente de citas" },
+      { type: "BUTTONS", buttons: [{ type: "QUICK_REPLY", text: "Elegir otra fecha" }] }
+    ]
+  }
+];
