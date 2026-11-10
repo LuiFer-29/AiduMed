@@ -351,3 +351,14 @@ figcaption .enlace-boton { padding: 0; font-size: 13px; }
 .lista-fechas-perfil.fijas li { background: #FBFCFB; }
 .etiqueta-anual { margin-left: auto; flex: none; font-size: 12px; font-weight: 700; color: var(--verde-oscuro); background: var(--verde-tinte); padding: 4px 9px; border-radius: 999px; }
 #vacaciones + .lista-fechas-perfil { margin-top: 0; }
+/* Administración con menú lateral */
+.admin .panel-admin { grid-template-areas: "menu vista"; grid-template-columns: 240px minmax(0, 1fr); }
+.admin .panel-admin[hidden] { display: none; }
+.admin-vista { display: flex; flex-direction: column; gap: 20px; }
+.admin-vista[hidden] { display: none; }
+.menu-alerta { background: #B42318; }
+@media (max-width: 860px) {
+  .admin .panel-admin { grid-template-areas: "menu" "vista"; grid-template-columns: minmax(0, 1fr); }
+  .admin .panel-menu { flex-wrap: wrap; }
+  .admin .panel-menu > a { flex: 1 1 auto; font-size: 14px; }
+}

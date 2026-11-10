@@ -17,6 +17,18 @@
     return;
   }
 
+  // ---------- Menú: Médicos / Vacaciones de cada año ----------
+  function mostrarSeccion() {
+    var sec = location.hash === '#vacaciones' ? 'vacaciones' : 'medicos';
+    $('vista-medicos').hidden = sec !== 'medicos';
+    $('vista-vacaciones').hidden = sec !== 'vacaciones';
+    document.querySelectorAll('.panel-menu [data-seccion]').forEach(function (a) {
+      if (a.dataset.seccion === sec) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+  }
+  window.addEventListener('hashchange', mostrarSeccion);
+  mostrarSeccion();
+
   var medicos = [];
   var sinRegistro = [];
   var filtro = new URLSearchParams(location.search).get('fotos') ? 'fotos' : 'en_revision';
@@ -49,6 +61,8 @@
 
   function pintar() {
     pintarFiltros();
+    var porRevisar = medicos.filter(function (m) { return m.estado === 'en_revision' || m.foto_pendiente_path; }).length;
+    $('menu-revisar').textContent = porRevisar; $('menu-revisar').hidden = !porRevisar; $('menu-revisar').title = porRevisar + ' por revisar (registros o fotos)';
     var lista = filtro === 'fotos' ? conFoto() : medicos.filter(function (m) { return filtro === 'todos' || m.estado === filtro; });
     var cuentas = (filtro === 'borrador' || filtro === 'todos') ? sinRegistro : [];
     if (!lista.length && !cuentas.length) { $('filas').innerHTML = '<tr><td colspan="6" class="vacio">No hay médicos en este estado.</td></tr>'; return; }
@@ -216,6 +230,8 @@
     pintarFeriados();
   }
   function pintarFeriados() {
+    var proximo = App.vacacionDelAnio('Semana Morazánica', new Date().getFullYear() + 1, feriados).fuente === 'pendiente';
+    $('menu-vacaciones').hidden = !proximo; $('menu-vacaciones').title = 'Falta definir la Semana Morazánica del próximo año';
     $('va-anios').innerHTML = anios.map(function (a) {
       var falta = App.vacacionDelAnio('Semana Morazánica', a, feriados).fuente === 'pendiente';
       return '<button type="button" role="tab" aria-selected="' + (a === anioVa) + '" data-anio="' + a + '">' + a + (falta ? ' <span class="punto-rojo" title="Falta la Semana Morazánica"></span>' : '') + '</button>';
