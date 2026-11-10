@@ -299,3 +299,5 @@ figcaption .enlace-boton { padding: 0; font-size: 13px; }
 .lista-fechas-perfil li .papelera svg { color: #B42318; }
 .cita-hora strong { white-space: nowrap; }
 @media (max-width: 560px) { .cita { grid-template-columns: 84px minmax(0, 1fr); } }
+/* Botones de "Cambiar foto" y "Cambiar contraseña" a la misma altura */
+.cuenta-mitad > .boton { margin-top: auto; }

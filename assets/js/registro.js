@@ -4,6 +4,12 @@
   var sb = App.sb;
   var sesion = await App.requerirSesion();
   var uid = sesion.user.id;
+  // Si el navegador ya tenía una sesión abierta, el registro continúa con esa cuenta: lo decimos claramente.
+  document.getElementById('cuenta-correo').textContent = sesion.user.email;
+  document.getElementById('otra-cuenta').addEventListener('click', async function () {
+    await sb.auth.signOut();
+    location.href = '/cuenta?modo=crear&siguiente=%2Fregistro';
+  });
 
   var form = document.getElementById('formulario');
   var pasos = Array.prototype.slice.call(document.querySelectorAll('.paso-form'));
@@ -424,6 +430,8 @@
   if (perfil) rellenar(perfil); else { agregarServicio(); agregarServicio(); }
   if (planUrl && !form.querySelector('input[name="plan"]:checked')) form.querySelector('input[name="plan"][value="' + planUrl + '"]').checked = true;
   document.getElementById('cargando').hidden = true;
+  // El aviso de la cuenta solo hace falta al empezar o continuar un registro, no al editar datos ya aprobados.
+  document.getElementById('cuenta-activa').hidden = !!(perfil && perfil.estado !== 'borrador');
   modoDirecto = !!(perfil && pasoDirecto >= 1 && pasoDirecto <= total && perfil.estado !== 'borrador' && perfil.estado !== 'rechazado');
   mostrarPaso(modoDirecto ? pasoDirecto : 1, true);
 })();

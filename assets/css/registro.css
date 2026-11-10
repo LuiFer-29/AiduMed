@@ -138,3 +138,7 @@ body.registro { background: #E9EEEB; min-height: 100vh; }
 .plan-opcion input:checked + .plan-caja .casilla svg { visibility: visible; }
 .plan-opcion input:focus-visible + .plan-caja { outline: 3px solid var(--verde-claro); outline-offset: 2px; }
 .enlace-comparar { font-size: 14px; font-weight: 600; margin-top: -6px; }
+.cuenta-activa { max-width: 640px; margin: 14px auto 0; padding: 10px 14px; border-radius: 12px; background: var(--verde-tinte); color: var(--verde-oscuro); font-size: 14px; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; justify-content: space-between; }
+.cuenta-activa[hidden] { display: none; }
+.cuenta-activa .enlace-boton { align-self: auto; font-size: 14px; }
+@media (max-width: 680px) { .cuenta-activa { margin: 12px 16px 0; } }

@@ -13,11 +13,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=4">
-<link rel="stylesheet" href="/assets/css/registro.css?v=8">
-<link rel="stylesheet" href="/assets/css/app.css?v=13">
+<link rel="stylesheet" href="/assets/css/registro.css?v=9">
+<link rel="stylesheet" href="/assets/css/app.css?v=14">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
 <script src="/assets/js/app.js?v=14" defer></script>
-<script src="/assets/js/registro.js?v=13" defer></script>
+<script src="/assets/js/registro.js?v=14" defer></script>
 </head>
 <body class="registro">
 
@@ -32,6 +32,11 @@
     </div>
     <div class="progreso" role="progressbar" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1" aria-label="Avance del registro"><div class="progreso-barra" id="progreso"></div></div>
   </header>
+
+  <div class="cuenta-activa" id="cuenta-activa" hidden>
+    <span>Se está registrando con <strong id="cuenta-correo"></strong></span>
+    <button type="button" class="enlace-boton" id="otra-cuenta">¿No es usted? Usar otra cuenta</button>
+  </div>
 
   <form id="formulario" novalidate>
 <div class="registro-cuerpo">
