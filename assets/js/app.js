@@ -46,6 +46,32 @@ window.AIDU_SB = {
       irA('/');
     },
 
+    // Mientras el registro no se ha enviado, la sesión se cierra tras 1 hora sin actividad
+    // (también si el médico vuelve después). Ya registrado, la sesión queda abierta para el día a día.
+    vigilarRegistro: function (sesion) {
+      var CLAVE = 'aidu-actividad', LIMITE = 60 * 60 * 1000;
+      var leer = function () { try { return Number(localStorage.getItem(CLAVE)) || 0; } catch (e) { return 0; } };
+      var marcar = function () { try { localStorage.setItem(CLAVE, String(Date.now())); } catch (e) { /* sin almacenamiento */ } };
+      var cerrar = async function () {
+        try { localStorage.removeItem(CLAVE); } catch (e) { /* nada */ }
+        await sb.auth.signOut();
+        irA('/cuenta?modo=entrar&inactiva=1&siguiente=' + encodeURIComponent(location.pathname));
+      };
+      var vencida = function () {
+        var ultima = Math.max(leer(), Date.parse(sesion.user.last_sign_in_at || 0) || 0);
+        return Date.now() - ultima > LIMITE;
+      };
+      if (vencida()) { cerrar(); return true; }
+      marcar();
+      var ultimaMarca = Date.now();
+      ['pointerdown', 'keydown', 'input', 'scroll', 'touchstart'].forEach(function (ev) {
+        window.addEventListener(ev, function () { if (Date.now() - ultimaMarca > 30000) { ultimaMarca = Date.now(); marcar(); } }, { passive: true, capture: true });
+      });
+      setInterval(function () { if (vencida()) cerrar(); }, 60000);
+      document.addEventListener('visibilitychange', function () { if (!document.hidden && vencida()) cerrar(); });
+      return false;
+    },
+
     estados: {
       borrador: { texto: 'Registro incompleto', clase: 'estado-gris' },
       en_revision: { texto: 'En revisión', clase: 'estado-ambar' },

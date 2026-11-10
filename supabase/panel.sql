@@ -92,3 +92,7 @@ begin
 end $$;
 revoke all on function public.cancelar_dia(date, text) from public, anon;
 grant execute on function public.cancelar_dia(date, text) to authenticated;
+
+-- Anticipación mínima para agendar, en minutos (la elige cada médico; obligatoria en el registro).
+alter table public.medicos add column if not exists aviso_minimo_min integer
+  check (aviso_minimo_min in (30, 60, 120, 240, 1440));

@@ -16,8 +16,8 @@
 <link rel="stylesheet" href="/assets/css/registro.css?v=9">
 <link rel="stylesheet" href="/assets/css/app.css?v=14">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
-<script src="/assets/js/app.js?v=14" defer></script>
-<script src="/assets/js/registro.js?v=14" defer></script>
+<script src="/assets/js/app.js?v=15" defer></script>
+<script src="/assets/js/registro.js?v=15" defer></script>
 </head>
 <body class="registro">
 
@@ -207,6 +207,15 @@
 
         <label class="campo">Tiempo entre citas
           <select name="tiempo_entre_citas"><option>Sin pausa</option><option>10 min</option><option>15 min</option></select>
+        </label>
+        <label class="campo">Anticipación mínima para agendar
+          <select name="aviso_minimo_min" required>
+            <option value="" selected disabled>Elija una opción</option>
+            <option value="30">30 minutos antes</option><option value="60">1 hora antes</option><option value="120">2 horas antes</option>
+            <option value="240">4 horas antes</option><option value="1440">1 día antes</option>
+          </select>
+          <span class="ayuda">El asistente no ofrecerá horarios que empiecen antes de este tiempo. Por ejemplo, con 1 hora, a las 3:00 p. m. el primer horario disponible es a las 4:00 p. m.</span>
+          <span class="error" data-error-for="aviso_minimo_min">Elija con cuánto tiempo de anticipación pueden agendar.</span>
         </label>
         <label class="campo">Se puede agendar hasta
           <select name="anticipacion"><option>2 semanas antes</option><option>1 mes antes</option><option>2 meses antes</option></select>

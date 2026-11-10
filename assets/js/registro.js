@@ -100,6 +100,7 @@
       if (!alguno) { ok = false; primero = primero || nombres[0]; }
     }
     if (n === 4) {
+      revisar('aviso_minimo_min', function (c) { return !!c.value; });
       var dias = document.querySelectorAll('.dia[aria-pressed="true"]').length;
       document.getElementById('error-dias').classList.toggle('visible', dias === 0);
       if (dias === 0) { ok = false; primero = primero || document.querySelector('.dia'); }
@@ -285,6 +286,7 @@
     }
     if (p.tiempo_entre_citas) f.tiempo_entre_citas.value = p.tiempo_entre_citas;
     if (p.anticipacion) f.anticipacion.value = p.anticipacion;
+    if (p.aviso_minimo_min) f.aviso_minimo_min.value = String(p.aviso_minimo_min);
     if (p.enviado_at || (p.vacaciones && p.vacaciones.length)) document.querySelectorAll('.tarjeta-opcion').forEach(function (d) { d.setAttribute('aria-pressed', (p.vacaciones || []).indexOf(d.dataset.vacacion) >= 0); });
     listaFechas.innerHTML = '';
     (p.otras_vacaciones || []).forEach(function (v) { agregarFecha(v); });
@@ -355,7 +357,7 @@
       hora_desde: f.hora_desde.value, hora_hasta: f.hora_hasta.value,
       almuerzo_desde: document.getElementById('tiene-almuerzo').checked ? f.almuerzo_desde.value : null,
       almuerzo_hasta: document.getElementById('tiene-almuerzo').checked ? f.almuerzo_hasta.value : null,
-      tiempo_entre_citas: f.tiempo_entre_citas.value, anticipacion: f.anticipacion.value,
+      tiempo_entre_citas: f.tiempo_entre_citas.value, anticipacion: f.anticipacion.value, aviso_minimo_min: Number(f.aviso_minimo_min.value) || null,
       vacaciones: Array.prototype.map.call(document.querySelectorAll('.tarjeta-opcion[aria-pressed="true"]'), function (d) { return d.dataset.vacacion; }),
       otras_vacaciones: Array.prototype.map.call(listaFechas.querySelectorAll('.fecha-fila'), function (fila) {
         var d = fila.querySelector('.f-desde').value;
@@ -429,6 +431,7 @@
   } catch (e) { console.error(e); }
   if (perfil) rellenar(perfil); else { agregarServicio(); agregarServicio(); }
   if (planUrl && !form.querySelector('input[name="plan"]:checked')) form.querySelector('input[name="plan"][value="' + planUrl + '"]').checked = true;
+  if ((!perfil || perfil.estado === 'borrador' || perfil.estado === 'rechazado') && App.vigilarRegistro(sesion)) return;
   document.getElementById('cargando').hidden = true;
   // El aviso de la cuenta solo hace falta al empezar o continuar un registro, no al editar datos ya aprobados.
   document.getElementById('cuenta-activa').hidden = !!(perfil && perfil.estado !== 'borrador');

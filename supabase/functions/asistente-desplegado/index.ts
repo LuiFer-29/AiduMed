@@ -297,7 +297,7 @@ function horariosDelDia(p, fecha, duracion, ocupado, rangos, ahora) {
   const pausa = minutos(p.tiempo_entre_citas);
   const paso = duracion <= 15 ? 15 : 30;
   const abre = instante(fecha, p.hora_desde), cierra = instante(fecha, p.hora_hasta);
-  const minimo = ahora.getTime() + AVISO_MINIMO_MIN * 6e4;
+  const minimo = ahora.getTime() + (p.aviso_minimo_min || AVISO_MINIMO_MIN) * 6e4;
   const citas = ocupado.map((o) => ({ i: new Date(o.inicio).getTime(), f: new Date(o.fin).getTime() }));
   const almuerzo = p.almuerzo_desde && p.almuerzo_hasta ? { i: instante(fecha, p.almuerzo_desde).getTime(), f: instante(fecha, p.almuerzo_hasta).getTime() } : null;
   const libres = [];

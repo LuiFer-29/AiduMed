@@ -30,6 +30,7 @@
     setTimeout(function () { $('aviso-guardado').hidden = true; }, 5000);
   }
 
+  if ((p.estado === 'borrador' || p.estado === 'rechazado') && App.vigilarRegistro(sesion)) return;
   var conCitas = !(p.estado === 'borrador' || p.estado === 'rechazado' || p.estado === 'en_revision');
   var aprobado = p.estado === 'aprobado' || p.estado === 'activo' || p.estado === 'pausado';
   var urlFoto = function (ruta) { return App.sb.storage.from('fotos').getPublicUrl(ruta).data.publicUrl + '?t=' + Date.parse(p.updated_at); };
@@ -104,7 +105,10 @@
   };
   $('horario').textContent = p.hora_desde ? h(p.hora_desde) + ' – ' + h(p.hora_hasta) : 'Sin horario';
   var dato = function (k, v) { return v ? '<div><dt>' + esc(k) + '</dt><dd>' + v + '</dd></div>' : ''; };
-  $('reglas').innerHTML = dato('Tiempo entre citas', esc(p.tiempo_entre_citas)) + dato('Se puede agendar hasta', esc(p.anticipacion)) +
+  var avisos = { 30: '30 minutos antes', 60: '1 hora antes', 120: '2 horas antes', 240: '4 horas antes', 1440: '1 día antes' };
+  $('reglas').innerHTML = dato('Anticipación mínima para agendar', p.aviso_minimo_min ? esc(avisos[p.aviso_minimo_min] || p.aviso_minimo_min + ' min antes')
+      : '<span class="texto-error">Sin definir. Mientras tanto usamos 1 hora. Defínala en «Editar».</span>') +
+    dato('Tiempo entre citas', esc(p.tiempo_entre_citas)) + dato('Se puede agendar hasta', esc(p.anticipacion)) +
     dato('Almuerzo', p.almuerzo_desde && p.almuerzo_hasta ? h(p.almuerzo_desde) + ' – ' + h(p.almuerzo_hasta) : '') +
     dato('Google Calendar', p.conectar_google_calendar ? 'Quiere conectarlo' : '');
 

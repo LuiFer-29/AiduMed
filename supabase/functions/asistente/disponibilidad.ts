@@ -11,13 +11,14 @@ export type Perfil = {
   anticipacion?: string | null;
   vacaciones?: string[] | null;
   otras_vacaciones?: Rango[] | null;
+  aviso_minimo_min?: number | null;
   almuerzo_desde?: string | null;
   almuerzo_hasta?: string | null;
 };
 export type Ocupado = { inicio: string | Date; fin: string | Date };
 
 const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-export const AVISO_MINIMO_MIN = 60; // no se agenda con menos de 1 hora de anticipación
+export const AVISO_MINIMO_MIN = 60; // si el médico no lo ha definido: no se agenda con menos de 1 hora de anticipación
 
 export function minutos(texto?: string | null): number {
   if (!texto) return 0;
@@ -69,7 +70,7 @@ export function horariosDelDia(
   const pausa = minutos(p.tiempo_entre_citas);
   const paso = duracion <= 15 ? 15 : 30;
   const abre = instante(fecha, p.hora_desde), cierra = instante(fecha, p.hora_hasta);
-  const minimo = ahora.getTime() + AVISO_MINIMO_MIN * 60_000;
+  const minimo = ahora.getTime() + (p.aviso_minimo_min || AVISO_MINIMO_MIN) * 60_000;
   const citas = ocupado.map((o) => ({ i: new Date(o.inicio).getTime(), f: new Date(o.fin).getTime() }));
   const almuerzo = p.almuerzo_desde && p.almuerzo_hasta
     ? { i: instante(fecha, p.almuerzo_desde).getTime(), f: instante(fecha, p.almuerzo_hasta).getTime() } : null;
