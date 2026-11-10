@@ -182,9 +182,9 @@ async function panel(req: Request): Promise<Response> {
       const o = propias.find((x) => f >= x.desde && f <= (x.hasta || x.desde));
       const r = rangos.find((x) => f >= x.desde && f <= x.hasta);
       if (!o && !r) continue;
-      const etiqueta = o
-        ? (o.origen === "cerrado" ? (o.motivo ? `Consultorio cerrado: ${o.motivo}` : "Consultorio cerrado") : (o.motivo ? `Vacaciones: ${o.motivo}` : "Vacaciones"))
-        : feriados.some((x) => x.nombre === r!.nombre) ? `Feriado: ${r!.nombre}` : `Vacaciones: ${r!.nombre}`;
+      // Una sola palabra para todos los casos: "Sin consulta", con el motivo si lo hay.
+      const motivo = o ? o.motivo : r!.nombre;
+      const etiqueta = motivo && motivo !== "vacaciones" ? `Sin consulta · ${motivo}` : "Sin consulta";
       dias.push({ fecha: f, etiqueta });
     }
     return json(req, { dias });

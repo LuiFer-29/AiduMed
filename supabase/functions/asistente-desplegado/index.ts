@@ -1445,7 +1445,8 @@ async function panel(req) {
       const o = propias.find((x) => f >= x.desde && f <= (x.hasta || x.desde));
       const r = rangos.find((x) => f >= x.desde && f <= x.hasta);
       if (!o && !r) continue;
-      const etiqueta = o ? o.origen === "cerrado" ? o.motivo ? `Consultorio cerrado: ${o.motivo}` : "Consultorio cerrado" : o.motivo ? `Vacaciones: ${o.motivo}` : "Vacaciones" : feriados.some((x) => x.nombre === r.nombre) ? `Feriado: ${r.nombre}` : `Vacaciones: ${r.nombre}`;
+      const motivo = o ? o.motivo : r.nombre;
+      const etiqueta = motivo && motivo !== "vacaciones" ? `Sin consulta \xB7 ${motivo}` : "Sin consulta";
       dias.push({ fecha: f, etiqueta });
     }
     return json(req, { dias });
