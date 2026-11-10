@@ -14,10 +14,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=4">
 <link rel="stylesheet" href="/assets/css/registro.css?v=8">
-<link rel="stylesheet" href="/assets/css/app.css?v=12">
+<link rel="stylesheet" href="/assets/css/app.css?v=13">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
 <script src="/assets/js/app.js?v=14" defer></script>
-<script src="/assets/js/registro.js?v=12" defer></script>
+<script src="/assets/js/registro.js?v=13" defer></script>
 </head>
 <body class="registro">
 
@@ -99,6 +99,10 @@
         <label class="campo">Nombre del consultorio
           <input type="text" name="consultorio" placeholder="Clínica Dental Sonrisa" required>
           <span class="error" data-error-for="consultorio">Escriba el nombre del consultorio.</span>
+        </label>
+        <label class="campo">Número de consultorio (opcional)
+          <input type="text" name="numero_consultorio" maxlength="20" placeholder="Ej.: 204, 3B">
+          <span class="ayuda">Se lo diremos al paciente al confirmar su cita y cuando usted lo llame a pasar.</span>
         </label>
         <label class="campo">Dirección
           <input type="text" name="direccion" autocomplete="street-address" placeholder="Barrio, calle, referencia" required>

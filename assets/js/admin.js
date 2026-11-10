@@ -19,7 +19,7 @@
 
   var medicos = [];
   var sinRegistro = [];
-  var filtro = 'en_revision';
+  var filtro = new URLSearchParams(location.search).get('fotos') ? 'fotos' : 'en_revision';
   var filtros = [
     ['en_revision', 'Por revisar', 'Enviaron su registro completo y esperan su revisión.'],
     ['aprobado', 'Aprobados', 'Usted ya los aprobó; falta configurar y probar su asistente de WhatsApp. Cuando esté funcionando, márquelos como activos.'],
@@ -27,14 +27,17 @@
     ['rechazado', 'Requieren cambios', 'Les pidió corregir algo; esperan que lo reenvíen.'],
     ['borrador', 'Registro incompleto', 'Crearon su cuenta pero no han terminado el formulario (o ni siquiera lo empiezan: «Solo cuenta»). No requieren acción; puede escribirles para animarlos.'],
     ['pausado', 'Pausados', 'Su asistente está detenido temporalmente.'],
-    ['todos', 'Todos', 'Todos los médicos registrados.']
+    ['todos', 'Todos', 'Todos los médicos registrados.'],
+    ['fotos', 'Fotos por aprobar', 'Médicos aprobados que subieron una foto de perfil nueva. No se publica hasta que usted la apruebe.']
   ];
 
+  function conFoto() { return medicos.filter(function (m) { return !!m.foto_pendiente_path; }); }
   function fecha(t) { return t ? new Date(t).toLocaleDateString('es-HN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'; }
 
   function pintarFiltros() {
     $('filtros').innerHTML = filtros.map(function (f) {
-      var n = f[0] === 'todos' ? medicos.length + sinRegistro.length : medicos.filter(function (m) { return m.estado === f[0]; }).length + (f[0] === 'borrador' ? sinRegistro.length : 0);
+      var n = f[0] === 'todos' ? medicos.length + sinRegistro.length : f[0] === 'fotos' ? conFoto().length : medicos.filter(function (m) { return m.estado === f[0]; }).length + (f[0] === 'borrador' ? sinRegistro.length : 0);
+      if (f[0] === 'fotos' && !n && filtro !== 'fotos') return '';
       return '<button type="button" data-f="' + f[0] + '" aria-pressed="' + (filtro === f[0]) + '">' + f[1] + ' (' + n + ')</button>';
     }).join('');
     $('filtros').querySelectorAll('button').forEach(function (b) {
@@ -46,7 +49,7 @@
 
   function pintar() {
     pintarFiltros();
-    var lista = medicos.filter(function (m) { return filtro === 'todos' || m.estado === filtro; });
+    var lista = filtro === 'fotos' ? conFoto() : medicos.filter(function (m) { return filtro === 'todos' || m.estado === filtro; });
     var cuentas = (filtro === 'borrador' || filtro === 'todos') ? sinRegistro : [];
     if (!lista.length && !cuentas.length) { $('filas').innerHTML = '<tr><td colspan="6" class="vacio">No hay médicos en este estado.</td></tr>'; return; }
     $('filas').innerHTML = lista.map(function (m) {
@@ -57,7 +60,7 @@
         '<td>' + esc(m.plan) + '</td>' +
         '<td>' + esc(m.whatsapp_consultorio || '—') + '</td>' +
         '<td>' + fecha(m.enviado_at) + '</td>' +
-        '<td><span class="estado ' + e.clase + '">' + e.texto + '</span></td></tr>';
+        '<td><span class="estado ' + e.clase + '">' + e.texto + '</span>' + (m.foto_pendiente_path ? '<br><span class="estado estado-ambar" style="margin-top:6px">Foto por aprobar</span>' : '') + '</td></tr>';
     }).join('') + cuentas.map(function (c) {
       // Cuentas que crearon usuario pero aún no guardan el primer paso del formulario (no tienen ficha).
       return '<tr class="fila-cuenta">' +
@@ -122,7 +125,7 @@
   async function verDetalle(id) {
     var m = medicos.find(function (x) { return x.id === id; });
     if (!m) return;
-    var urls = await Promise.all([urlImagen('carnes', m.carne_path), urlImagen('fotos', m.foto_path)]);
+    var urls = await Promise.all([urlImagen('carnes', m.carne_path), urlImagen('fotos', m.foto_path), urlImagen('fotos', m.foto_pendiente_path)]);
     var e = App.estados[m.estado] || App.estados.borrador;
     var fila = function (k, v) { return v ? '<div><dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd></div>' : ''; };
     var servicios = (m.servicios || []).map(function (s) { return s.nombre + ' · ' + s.duracion + (s.precio ? ' · L ' + s.precio : ''); }).join('\n');
@@ -131,13 +134,15 @@
       '<div class="detalle-cabecera"><div><h2 id="det-nombre">' + esc([m.titulo, m.nombre].filter(Boolean).join(' ') || m.correo) + '</h2><span class="estado ' + e.clase + '">' + e.texto + '</span></div><button type="button" class="cerrar" aria-label="Cerrar">×</button></div>' +
       '<div class="imagenes">' +
         '<figure>' + (urls[0] ? '<button type="button" class="ver-imagen" data-src="' + urls[0] + '" aria-label="Ver carné en grande"><img src="' + urls[0] + '" alt="Carné de colegiado"></button>' : '<div class="vacio">Sin carné</div>') + '<figcaption><span>Carné de colegiado</span>' + (urls[0] ? '<button type="button" class="enlace-boton ver-imagen" data-src="' + urls[0] + '">Ver en grande</button>' : '') + '</figcaption></figure>' +
-        '<figure>' + (urls[1] ? '<img src="' + urls[1] + '" alt="Foto de perfil">' : '<div class="vacio">Sin foto</div>') + '<figcaption><span>Foto de perfil</span></figcaption></figure>' +
+        '<figure>' + (urls[1] ? '<img src="' + urls[1] + '" alt="Foto de perfil">' : '<div class="vacio">Sin foto</div>') + '<figcaption><span>Foto de perfil' + (urls[2] ? ' (publicada)' : '') + '</span></figcaption></figure>' +
+        (urls[2] ? '<figure class="foto-por-aprobar"><img src="' + urls[2] + '" alt="Foto nueva por aprobar"><figcaption><span><strong>Foto nueva por aprobar</strong></span></figcaption>' +
+          '<div class="acciones-admin"><button type="button" class="boton boton-primario boton-chico" data-foto="aprobar">Aprobar foto</button><button type="button" class="boton boton-peligro boton-chico" data-foto="rechazar">Rechazar</button></div></figure>' : '') +
       '</div>' +
       '<section class="caja"><h2>Profesional</h2><dl class="datos">' +
         fila('Correo', m.correo) + fila('Colegiación', m.colegiacion) + fila('Especialidad', m.especialidad === 'Otra' ? m.especialidad_otra : m.especialidad) + fila('Plan', m.plan) + fila('Código del asistente', m.codigo ? m.codigo + '  ·  ' + App.enlacePacientes(m) : (m.estado === 'en_revision' ? 'Se asigna al aprobar' : '')) + fila('Descripción', m.descripcion) +
       '</dl></section>' +
       '<section class="caja"><h2>Consultorio</h2><dl class="datos">' +
-        fila('Nombre', m.consultorio) + fila('Dirección', m.direccion) + fila('WhatsApp', m.whatsapp_consultorio) + fila('Teléfono', m.telefono_consultorio) +
+        fila('Nombre', m.consultorio) + fila('Número de consultorio', m.numero_consultorio) + fila('Dirección', m.direccion) + fila('WhatsApp', m.whatsapp_consultorio) + fila('Teléfono', m.telefono_consultorio) +
         fila('Derivar consultas a', m.derivar_a === 'Otro número' ? m.whatsapp_secretaria : m.derivar_a) +
         (m.ubicacion_gps ? '<div><dt>Ubicación</dt><dd><a href="' + esc(m.ubicacion_gps) + '" target="_blank" rel="noopener">Ver en el mapa</a></dd></div>' : '') +
       '</dl></section>' +
@@ -162,6 +167,18 @@
       '</section>';
     $('detalle').querySelector('.cerrar').addEventListener('click', cerrar);
     $('detalle').querySelectorAll('.ver-imagen').forEach(function (b) { b.addEventListener('click', function () { abrirVisor(b.dataset.src); }); });
+    $('detalle').querySelectorAll('[data-foto]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        var aprobar = b.dataset.foto === 'aprobar';
+        b.disabled = true;
+        var cambios = aprobar ? { foto_path: m.foto_pendiente_path, foto_pendiente_path: null, foto_rechazada_at: null } : { foto_pendiente_path: null, foto_rechazada_at: new Date().toISOString() };
+        var r = await sb.from('medicos').update(cambios).eq('id', m.id).select().single();
+        if (r.error) { b.disabled = false; alert('No se pudo guardar: ' + r.error.message); return; }
+        Object.assign(m, r.data);
+        pintar();
+        verDetalle(m.id);
+      });
+    });
     $('detalle').querySelectorAll('[data-estado]').forEach(function (b) {
       b.addEventListener('click', async function () {
         var nuevo = b.dataset.estado;

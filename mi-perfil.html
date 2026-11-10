@@ -11,11 +11,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=4">
-<link rel="stylesheet" href="/assets/css/app.css?v=12">
+<link rel="stylesheet" href="/assets/css/app.css?v=13">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
 <script src="/assets/js/app.js?v=14" defer></script>
 <script src="/assets/vendor/qrcode-1.4.4.min.js" defer></script>
-<script src="/assets/js/mi-perfil.js?v=13" defer></script>
+<script src="/assets/js/mi-perfil.js?v=14" defer></script>
 </head>
 <body class="app">
 <header class="barra-app">
@@ -24,90 +24,163 @@
     <div class="acciones-barra"><span class="correo" id="correo-sesion"></span><button type="button" class="boton boton-secundario boton-chico" id="salir">Cerrar sesión</button></div>
   </div>
 </header>
-<main class="pagina-app" id="contenido">
+<main class="pagina-panel" id="contenido">
   <p class="cargando" id="cargando">Cargando su perfil…</p>
-  <div id="perfil" hidden>
-    <div class="aviso-ok" id="aviso-guardado" role="status" hidden>Cambios guardados.</div>
+  <div class="panel" id="perfil" hidden>
 
-    <section class="perfil-hero">
-      <div class="perfil-foto" id="foto"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
-      <div class="perfil-identidad">
-        <h1 id="saludo">Mi perfil</h1>
-        <p class="perfil-especialidad" id="especialidad"></p>
-        <span class="sello-verificado" id="sello" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9c-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2l4-4"/></svg>Médico verificado</span>
-      </div>
-      <div class="perfil-estado">
-        <span id="estado" class="estado"></span>
-        <p id="estado-texto"></p>
-        <a class="boton boton-primario boton-chico" id="editar" href="/registro" hidden>Editar mis datos</a>
-      </div>
-    </section>
-    <div class="nota-admin" id="nota-admin" hidden></div>
+    <nav class="panel-menu" id="menu" aria-label="Secciones de su panel" hidden>
+      <a href="#citas" data-seccion="citas" aria-current="page">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18M8 14h2M14 14h2M8 17h2"/></svg>
+        <span>Mis citas</span><b class="menu-cuenta" id="menu-hoy" hidden></b>
+      </a>
+      <a href="#configuracion" data-seccion="configuracion">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6a3 3 0 0 0 0 6z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3a1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8a1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        <span>Configuración</span>
+      </a>
+      <p class="menu-ayuda">¿Necesita ayuda? Escríbanos a <a href="mailto:info@aidu.pro">info@aidu.pro</a></p>
+    </nav>
 
-    <div class="tarjetas-perfil">
-      <section class="caja tarjeta-ancha" id="caja-citas">
-        <div class="caja-titulo">
+    <div class="panel-cabeza">
+      <div class="aviso-ok" id="aviso-guardado" role="status" hidden>Cambios guardados.</div>
+      <section class="perfil-hero">
+        <div class="perfil-foto" id="foto"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+        <div class="perfil-identidad">
+          <h1 id="saludo">Mi perfil</h1>
+          <p class="perfil-especialidad" id="especialidad"></p>
+          <span class="sello-verificado" id="sello" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9c-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2l4-4"/></svg>Médico verificado</span>
+        </div>
+        <div class="perfil-estado">
+          <span id="estado" class="estado"></span>
+          <p id="estado-texto"></p>
+          <a class="boton boton-primario boton-chico" id="editar" href="/registro" hidden>Editar mis datos</a>
+        </div>
+      </section>
+      <div class="nota-admin" id="nota-admin" hidden></div>
+    </div>
+
+    <!-- ===== Mis citas ===== -->
+    <div class="panel-vista" id="vista-citas" hidden>
+      <section class="caja" id="caja-citas">
+        <div class="caja-titulo titulo-citas">
           <h2>Mis citas</h2>
-          <div class="pestanas-mini" role="tablist" aria-label="Citas">
-            <button type="button" role="tab" aria-selected="true" data-vista="proximas">Próximas</button>
-            <button type="button" role="tab" aria-selected="false" data-vista="anteriores">Anteriores</button>
+          <div class="titulo-acciones">
+            <div class="pestanas-mini" role="tablist" aria-label="Citas">
+              <button type="button" role="tab" aria-selected="true" data-vista="proximas">Próximas</button>
+              <button type="button" role="tab" aria-selected="false" data-vista="anteriores">Anteriores</button>
+            </div>
+            <button type="button" class="mini peligro" id="abrir-cerrar-dia">Cancelar un día</button>
           </div>
         </div>
+
+        <form class="cerrar-dia" id="cerrar-dia" hidden>
+          <div class="cerrar-dia-titulo">
+            <strong>Cancelar todas las citas de un día</strong>
+            <span>Avisaremos por WhatsApp a cada paciente para que elija otra fecha, y el día quedará cerrado para nuevas citas.</span>
+          </div>
+          <div class="cerrar-dia-campos">
+            <label class="campo">Día<input type="date" id="cd-fecha" required></label>
+            <label class="campo">Motivo (opcional)<input type="text" id="cd-motivo" maxlength="60" placeholder="Ej.: Emergencia, congreso médico"></label>
+          </div>
+          <p class="cerrar-dia-cuenta" id="cd-cuenta"></p>
+          <div class="cerrar-dia-botones">
+            <button type="submit" class="boton boton-peligro-lleno boton-chico" id="cd-confirmar" disabled>Elija un día</button>
+            <button type="button" class="boton boton-secundario boton-chico" id="cd-volver">No, volver</button>
+          </div>
+          <p class="mensaje error" id="cd-error" hidden></p>
+        </form>
+
         <p class="resumen-citas" id="resumen-citas"></p>
         <div id="lista-citas" class="lista-citas"><p class="ayuda">Cargando citas…</p></div>
       </section>
-
-      <section class="caja tarjeta-ancha enlace-pacientes" id="caja-enlace" hidden>
-        <div class="enlace-texto">
-          <h2>Su enlace para pacientes</h2>
-          <p class="ayuda" id="enlace-ayuda">Compártalo en su WhatsApp, redes sociales o tarjetas. Quien lo abra llega directo a su asistente de citas.</p>
-          <div class="codigo-grande"><span>Su código</span><strong id="codigo"></strong></div>
-          <div class="copiar-fila">
-            <input type="text" id="enlace" readonly aria-label="Enlace para pacientes">
-            <button type="button" class="boton boton-primario boton-chico" id="copiar">Copiar</button>
-          </div>
-        </div>
-        <div class="enlace-qr">
-          <canvas id="qr" width="220" height="220" aria-label="Código QR del enlace"></canvas>
-          <button type="button" class="boton boton-secundario boton-chico" id="descargar-qr">Descargar QR</button>
-        </div>
-      </section>
-
-      <section class="caja tarjeta-ancha">
-        <div class="caja-titulo"><h2>Servicios y precios</h2><a class="editar-enlace" href="/registro?paso=3">Editar</a></div>
-        <ul class="lista-servicios-perfil" id="servicios"></ul>
-      </section>
-
-      <section class="caja">
-        <div class="caja-titulo"><h2>Horario de atención</h2><a class="editar-enlace" href="/registro?paso=4">Editar</a></div>
-        <div class="semana" id="semana"></div>
-        <div class="hora-grande" id="horario"></div>
-        <dl class="mini-datos" id="reglas"></dl>
-      </section>
-
-      <section class="caja">
-        <div class="caja-titulo"><h2>Vacaciones y días libres</h2><a class="editar-enlace" href="/registro?paso=4">Editar</a></div>
-        <p class="ayuda">En estas fechas el asistente no agenda citas.</p>
-        <div class="chips" id="vacaciones"></div>
-        <ul class="lista-fechas-perfil" id="otras-fechas"></ul>
-      </section>
-
-      <section class="caja">
-        <div class="caja-titulo"><h2>Consultorio</h2><a class="editar-enlace" href="/registro?paso=2">Editar</a></div>
-        <dl class="mini-datos" id="consultorio"></dl>
-      </section>
-
-      <section class="caja">
-        <div class="caja-titulo"><h2>Datos profesionales</h2><a class="editar-enlace" href="/registro?paso=1">Editar</a></div>
-        <dl class="mini-datos" id="profesional"></dl>
-      </section>
-
-      <section class="caja">
-        <div class="caja-titulo"><h2>Su plan</h2><a class="editar-enlace" href="/registro?paso=5">Cambiar</a></div>
-        <div class="plan-perfil" id="plan"></div>
-      </section>
-
     </div>
+
+    <!-- ===== Configuración ===== -->
+    <div class="panel-vista" id="vista-configuracion" hidden>
+      <div class="tarjetas-perfil">
+        <section class="caja tarjeta-ancha enlace-pacientes" id="caja-enlace" hidden>
+          <div class="enlace-texto">
+            <h2>Su enlace para pacientes</h2>
+            <p class="ayuda" id="enlace-ayuda">Compártalo en su WhatsApp, redes sociales o tarjetas. Quien lo abra llega directo a su asistente de citas.</p>
+            <div class="codigo-grande"><span>Su código</span><strong id="codigo"></strong></div>
+            <div class="copiar-fila">
+              <input type="text" id="enlace" readonly aria-label="Enlace para pacientes">
+              <button type="button" class="boton boton-primario boton-chico" id="copiar">Copiar</button>
+            </div>
+          </div>
+          <div class="enlace-qr">
+            <canvas id="qr" width="440" height="440" aria-label="Código QR del enlace"></canvas>
+            <div class="qr-botones">
+              <button type="button" class="boton boton-secundario boton-chico" id="descargar-qr">Descargar QR</button>
+              <button type="button" class="boton boton-primario boton-chico" id="descargar-tarjeta">Tarjeta para imprimir</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="caja tarjeta-ancha cuenta-caja">
+          <div class="cuenta-mitad">
+            <h2>Foto de perfil</h2>
+            <div class="foto-fila">
+              <div class="foto-mini" id="foto-actual"></div>
+              <div class="foto-texto" id="foto-texto">
+                <p class="ayuda">Use una foto de frente, con buena luz. Revisamos cada foto antes de publicarla.</p>
+              </div>
+            </div>
+            <label class="boton boton-secundario boton-chico boton-archivo">Cambiar foto<input type="file" id="nueva-foto" accept="image/*"></label>
+            <p class="mensaje" id="foto-msg" hidden></p>
+          </div>
+          <div class="cuenta-mitad">
+            <h2>Contraseña</h2>
+            <p class="ayuda">La usa para entrar a este panel con <strong id="correo-cuenta"></strong>.</p>
+            <button type="button" class="boton boton-secundario boton-chico" id="abrir-clave">Cambiar contraseña</button>
+            <form class="form-app form-clave" id="form-clave" hidden>
+              <label class="campo">Contraseña actual<span class="clave-caja"><input type="password" id="clave-actual" autocomplete="current-password" required><button type="button" class="ver-clave" data-ver="clave-actual">Mostrar</button></span></label>
+              <label class="campo">Contraseña nueva<span class="clave-caja"><input type="password" id="clave-nueva" autocomplete="new-password" minlength="8" required><button type="button" class="ver-clave" data-ver="clave-nueva">Mostrar</button></span><span class="ayuda">Al menos 8 caracteres.</span></label>
+              <label class="campo">Repita la contraseña nueva<span class="clave-caja"><input type="password" id="clave-repetir" autocomplete="new-password" minlength="8" required><button type="button" class="ver-clave" data-ver="clave-repetir">Mostrar</button></span></label>
+              <div class="cerrar-dia-botones">
+                <button type="submit" class="boton boton-primario boton-chico" id="guardar-clave">Guardar contraseña</button>
+                <button type="button" class="boton boton-secundario boton-chico" id="cancelar-clave">Cancelar</button>
+              </div>
+            </form>
+            <p class="mensaje" id="clave-msg" hidden></p>
+          </div>
+        </section>
+
+        <section class="caja tarjeta-ancha">
+          <div class="caja-titulo"><h2>Servicios y precios</h2><a class="editar-enlace" href="/registro?paso=3">Editar</a></div>
+          <ul class="lista-servicios-perfil" id="servicios"></ul>
+        </section>
+
+        <section class="caja">
+          <div class="caja-titulo"><h2>Horario de atención</h2><a class="editar-enlace" href="/registro?paso=4">Editar</a></div>
+          <div class="semana" id="semana"></div>
+          <div class="hora-grande" id="horario"></div>
+          <dl class="mini-datos" id="reglas"></dl>
+        </section>
+
+        <section class="caja">
+          <div class="caja-titulo"><h2>Vacaciones y días libres</h2><a class="editar-enlace" href="/registro?paso=4">Editar</a></div>
+          <p class="ayuda">En estas fechas el asistente no agenda citas.</p>
+          <div class="chips" id="vacaciones"></div>
+          <ul class="lista-fechas-perfil" id="otras-fechas"></ul>
+        </section>
+
+        <section class="caja">
+          <div class="caja-titulo"><h2>Consultorio</h2><a class="editar-enlace" href="/registro?paso=2">Editar</a></div>
+          <dl class="mini-datos" id="consultorio"></dl>
+        </section>
+
+        <section class="caja">
+          <div class="caja-titulo"><h2>Datos profesionales</h2><a class="editar-enlace" href="/registro?paso=1">Editar</a></div>
+          <dl class="mini-datos" id="profesional"></dl>
+        </section>
+
+        <section class="caja">
+          <div class="caja-titulo"><h2>Su plan</h2><a class="editar-enlace" href="/registro?paso=5">Cambiar</a></div>
+          <div class="plan-perfil" id="plan"></div>
+        </section>
+      </div>
+    </div>
+
   </div>
 </main>
 </body>

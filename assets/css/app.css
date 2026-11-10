@@ -156,8 +156,6 @@ figcaption .enlace-boton { padding: 0; font-size: 13px; }
 .plan-perfil strong { font-family: var(--titulos); font-size: 24px; font-weight: 800; color: var(--verde); }
 .caja-pronto { border-style: dashed; background: #FBFCFB; }
 .etiqueta-pronto { font-size: 12px; font-weight: 700; color: #7A4B00; background: #FFF4DE; padding: 4px 10px; border-radius: 999px; }
-#perfil { display: flex; flex-direction: column; gap: 20px; }
-#perfil[hidden] { display: none; }
 @media (max-width: 560px) {
   .pagina-app { padding: 20px 14px 48px; }
   .perfil-hero { padding: 22px 18px; }
@@ -211,3 +209,93 @@ figcaption .enlace-boton { padding: 0; font-size: 13px; }
 .copiar-fila input { flex: 1; min-width: 0; min-height: 40px; border: 1px solid var(--borde-fuerte); border-radius: 10px; padding: 0 12px; font-family: inherit; font-size: 13px; color: var(--texto-2); background: #FBFCFB; }
 .enlace-qr { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .enlace-qr canvas { width: 180px; height: 180px; border: 1px solid var(--borde); border-radius: 12px; }
+
+/* Panel del médico: menú lateral + secciones */
+.pagina-panel { max-width: 1160px; margin: 0 auto; padding: 28px 24px 64px; }
+.panel { display: grid; grid-template-columns: 220px minmax(0, 1fr); grid-template-areas: "menu cabeza" "menu vista"; gap: 20px 24px; align-items: start; }
+.panel[hidden] { display: none; }
+.panel.sin-menu { grid-template-columns: minmax(0, 1fr); grid-template-areas: "cabeza" "vista"; max-width: 880px; margin: 0 auto; }
+.panel-cabeza { grid-area: cabeza; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.panel-vista { grid-area: vista; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.panel-vista[hidden] { display: none; }
+.panel-menu { grid-area: menu; position: sticky; top: 20px; background: var(--blanco); border: 1px solid var(--borde); border-radius: 16px; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
+.panel-menu[hidden] { display: none; }
+.panel-menu > a { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 11px; font-size: 15px; font-weight: 700; color: var(--texto-2); text-decoration: none; position: relative; }
+.panel-menu > a:hover { background: #F1F5F3; color: var(--tinta); }
+.panel-menu > a[aria-current="page"] { background: var(--verde-tinte); color: var(--verde-oscuro); }
+.panel-menu > a[aria-current="page"]::before { content: ""; position: absolute; left: -10px; top: 10px; bottom: 10px; width: 4px; border-radius: 0 4px 4px 0; background: var(--verde); }
+.panel-menu > a svg { flex: none; }
+.menu-cuenta { margin-left: auto; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: var(--verde); color: var(--blanco); font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }
+.menu-cuenta[hidden] { display: none; }
+.menu-ayuda { margin: 8px 6px 4px; padding-top: 12px; border-top: 1px solid var(--borde); font-size: 12px; line-height: 1.5; color: var(--texto-2); }
+@media (max-width: 860px) {
+  .panel { grid-template-columns: minmax(0, 1fr); grid-template-areas: "cabeza" "menu" "vista"; gap: 14px; }
+  .panel-menu { position: static; flex-direction: row; padding: 4px; border-radius: 14px; }
+  .panel-menu > a { flex: 1; justify-content: center; padding: 11px 10px; }
+  .panel-menu > a[aria-current="page"]::before { display: none; }
+  .panel-menu > a[aria-current="page"] { background: var(--verde); color: var(--blanco); }
+  .panel-menu > a[aria-current="page"] .menu-cuenta { background: var(--blanco); color: var(--verde); }
+  .menu-cuenta { margin-left: 0; }
+  .menu-ayuda { display: none; }
+}
+@media (max-width: 560px) { .pagina-panel { padding: 16px 12px 48px; } }
+
+/* Mis citas: acciones, días cerrados y cancelar un día */
+.titulo-citas { flex-wrap: wrap; }
+.titulo-acciones { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mini.primario { background: var(--verde); border-color: var(--verde); color: var(--blanco); }
+.mini.primario:hover { background: var(--verde-oscuro); border-color: var(--verde-oscuro); color: var(--blanco); }
+.mini[disabled] { opacity: .65; cursor: progress; }
+.dia-cerrado { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: #FFF8EB; border: 1px dashed #F0C77A; color: #7A4B00; font-size: 14px; font-weight: 700; }
+.dia-cerrado svg { flex: none; }
+.dia-cerrado.con-citas { margin-bottom: 8px; border-style: solid; }
+.cerrar-dia { border: 1px solid #FECDCA; background: #FFFBFA; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.cerrar-dia[hidden] { display: none; }
+.cerrar-dia-titulo { display: flex; flex-direction: column; gap: 4px; }
+.cerrar-dia-titulo strong { font-size: 16px; color: #7A271A; }
+.cerrar-dia-titulo span { font-size: 14px; line-height: 1.5; color: var(--texto-2); }
+.cerrar-dia-campos { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 12px; }
+@media (max-width: 560px) { .cerrar-dia-campos { grid-template-columns: minmax(0, 1fr); } }
+.cerrar-dia input, .form-clave input { width: 100%; height: 44px; padding: 0 12px; border: 1px solid var(--borde-fuerte); border-radius: 10px; font-family: inherit; font-size: 15px; color: var(--tinta); background: var(--blanco); }
+.cerrar-dia-cuenta { margin: 0; font-size: 14px; line-height: 1.5; color: var(--tinta); }
+.cerrar-dia-cuenta:empty { display: none; }
+.cerrar-dia-botones { display: flex; gap: 8px; flex-wrap: wrap; }
+.boton-peligro-lleno { background: #B42318; border-color: #B42318; color: var(--blanco); }
+.boton-peligro-lleno:hover { background: #912018; border-color: #912018; color: var(--blanco); }
+
+/* Vacaciones: motivo y papelera */
+.lista-fechas-perfil li { justify-content: flex-start; }
+.fecha-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.fecha-motivo { font-size: 13px; font-weight: 500; color: var(--texto-2); }
+.papelera { margin-left: auto; flex: none; width: 36px; height: 36px; border-radius: 9px; border: 1px solid transparent; background: transparent; color: #B42318; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.papelera:hover { background: #FEF3F2; border-color: #FECDCA; }
+.lista-fechas-perfil li.confirmando { background: #FFFBFA; border-color: #FECDCA; flex-wrap: wrap; }
+.lista-fechas-perfil li.confirmando .fecha-texto { font-size: 14px; }
+
+/* Foto y contraseña */
+.cuenta-caja { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+@media (max-width: 700px) { .cuenta-caja { grid-template-columns: minmax(0, 1fr); } }
+.cuenta-mitad { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; min-width: 0; }
+.cuenta-mitad + .cuenta-mitad { border-left: 1px solid var(--borde); padding-left: 24px; }
+@media (max-width: 700px) { .cuenta-mitad + .cuenta-mitad { border-left: none; padding-left: 0; border-top: 1px solid var(--borde); padding-top: 20px; } }
+.foto-fila { display: flex; gap: 14px; align-items: center; }
+.foto-mini { width: 72px; height: 72px; flex: none; border-radius: 999px; overflow: hidden; background: #F1F5F3; color: #9AA7A4; display: flex; align-items: center; justify-content: center; border: 1px solid var(--borde); }
+.foto-mini img { width: 100%; height: 100%; object-fit: cover; }
+.foto-texto p { margin: 0; }
+.foto-pendiente { display: flex; gap: 10px; align-items: center; }
+.foto-pendiente img { width: 48px; height: 48px; border-radius: 999px; object-fit: cover; border: 2px dashed #F0C77A; }
+.foto-pendiente div { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.texto-error { color: #B42318 !important; }
+.boton-archivo { position: relative; overflow: hidden; cursor: pointer; }
+.boton-archivo input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.form-clave { width: 100%; gap: 12px; }
+.cuenta-mitad .mensaje { width: 100%; margin: 0; }
+.cuenta-mitad .mensaje[hidden] { display: none; }
+
+/* QR con la Ú */
+.enlace-qr canvas { width: 200px; height: 200px; }
+.qr-botones { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.foto-por-aprobar { border: 2px dashed #F0C77A !important; background: #FFFBF2 !important; }
+.lista-fechas-perfil li .papelera svg { color: #B42318; }
+.cita-hora strong { white-space: nowrap; }
+@media (max-width: 560px) { .cita { grid-template-columns: 84px minmax(0, 1fr); } }

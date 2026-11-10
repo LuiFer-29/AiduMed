@@ -258,6 +258,7 @@
       sb.storage.from('carnes').createSignedUrl(p.carne_path, 600).then(function (r) { if (r.data) carneListo(r.data.signedUrl); });
     }
     f.consultorio.value = p.consultorio || '';
+    f.numero_consultorio.value = p.numero_consultorio || '';
     f.direccion.value = p.direccion || '';
     if (p.ubicacion_gps) { f.enlace_mapa.value = p.ubicacion_gps; document.getElementById('ubicacion-texto').textContent = 'Ubicación agregada'; btnUbicacion.classList.add('listo'); }
     f.whatsapp_consultorio.value = formatoTel(p.whatsapp_consultorio);
@@ -325,7 +326,7 @@
       colegiacion: f.colegiacion.value.trim(), descripcion: f.descripcion.value.trim() || null
     };
     if (n === 2) return {
-      consultorio: f.consultorio.value.trim(), direccion: f.direccion.value.trim(), ubicacion_gps: f.enlace_mapa.value.trim() || null,
+      consultorio: f.consultorio.value.trim(), numero_consultorio: f.numero_consultorio.value.trim() || null, direccion: f.direccion.value.trim(), ubicacion_gps: f.enlace_mapa.value.trim() || null,
       whatsapp_consultorio: conPrefijo(f.whatsapp_consultorio.value), telefono_consultorio: conPrefijo(f.telefono_consultorio.value),
       derivar_a: f.derivar_a.value, whatsapp_secretaria: f.derivar_a.value === 'Otro número' ? conPrefijo(f.whatsapp_secretaria.value) : null
     };
@@ -362,7 +363,8 @@
   async function guardar(n) {
     var datos = datosDelPaso(n);
     if (n === 1) {
-      var foto = await subir('fotos', document.getElementById('foto'), 'perfil');
+      // Cada foto lleva un nombre nuevo: si el registro ya fue aprobado, la nueva queda en revisión sin reemplazar la publicada.
+      var foto = await subir('fotos', document.getElementById('foto'), 'perfil-' + Date.now());
       if (foto) datos.foto_path = foto;
       var carne = await subir('carnes', document.getElementById('carne'), 'carne');
       if (carne) datos.carne_path = carne;
