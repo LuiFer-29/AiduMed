@@ -39,17 +39,22 @@ export function diasDeAnticipacion(texto?: string | null): number {
 export function rangosLibres(p: Perfil, feriados: Rango[], anio: number): Rango[] {
   const r: Rango[] = [];
   const vac = p.vacaciones || [];
-  for (const a of [anio, anio + 1]) {
+  // Fechas que fijó el administrador para un año (tabla "feriados"); si no hay, se calculan.
+  const fijado = (nombre: string, a: number) => feriados.filter((f) => f.nombre === nombre && Number(f.desde.slice(0, 4)) === a);
+  for (const a of [anio - 1, anio, anio + 1]) {
     if (vac.includes("Semana Santa")) {
-      const domingo = pascua(a);
-      r.push({ desde: sumarDias(domingo, -6), hasta: domingo, nombre: "Semana Santa" });
+      const f = fijado("Semana Santa", a);
+      if (f.length) r.push(...f);
+      else { const domingo = pascua(a); r.push({ desde: sumarDias(domingo, -6), hasta: domingo, nombre: "Semana Santa" }); }
     }
     if (vac.includes("Navidad y Año Nuevo")) {
-      r.push({ desde: `${a - 1}-12-24`, hasta: `${a}-01-01`, nombre: "Navidad y Año Nuevo" });
-      r.push({ desde: `${a}-12-24`, hasta: `${a + 1}-01-01`, nombre: "Navidad y Año Nuevo" });
+      const f = fijado("Navidad y Año Nuevo", a);
+      if (f.length) r.push(...f);
+      else r.push({ desde: `${a}-12-24`, hasta: `${a + 1}-01-01`, nombre: "Navidad y Año Nuevo" });
     }
   }
   for (const f of feriados) {
+    if (f.nombre === "Semana Santa" || f.nombre === "Navidad y Año Nuevo") continue;
     if (vac.includes(f.nombre || "")) r.push(f);
   }
   for (const o of p.otras_vacaciones || []) r.push({ desde: o.desde, hasta: o.hasta || o.desde, nombre: o.motivo || o.nombre || "vacaciones" });

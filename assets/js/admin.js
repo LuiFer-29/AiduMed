@@ -201,5 +201,57 @@
     $('detalle').querySelector('.cerrar').focus();
   }
 
+  // ---------- Vacaciones de cada año (tabla feriados) ----------
+  var feriados = [], anioVa = new Date().getFullYear();
+  var anios = [anioVa, anioVa + 1, anioVa + 2];
+  var fechaCorta = function (t) {
+    if (!t) return '';
+    var x = String(t).split('-'), m = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    return +x[2] + ' ' + m[+x[1] - 1] + ' ' + x[0];
+  };
+  var etiquetas = { fijada: ['Guardada', 'estado-verde'], calculada: ['Calculada automáticamente', 'estado-azul'], pendiente: ['Falta definir', 'estado-rojo'] };
+  async function cargarFeriados() {
+    var r = await sb.from('feriados').select('id, nombre, desde, hasta').order('desde');
+    feriados = r.error ? [] : r.data || [];
+    pintarFeriados();
+  }
+  function pintarFeriados() {
+    $('va-anios').innerHTML = anios.map(function (a) {
+      var falta = App.vacacionDelAnio('Semana Morazánica', a, feriados).fuente === 'pendiente';
+      return '<button type="button" role="tab" aria-selected="' + (a === anioVa) + '" data-anio="' + a + '">' + a + (falta ? ' <span class="punto-rojo" title="Falta la Semana Morazánica"></span>' : '') + '</button>';
+    }).join('');
+    $('va-anios').querySelectorAll('[data-anio]').forEach(function (b) {
+      b.addEventListener('click', function () { anioVa = +b.dataset.anio; $('va-msg').hidden = true; pintarFeriados(); });
+    });
+    $('va-form').innerHTML = App.VACACIONES_FIJAS.map(function (nombre, i) {
+      var v = App.vacacionDelAnio(nombre, anioVa, feriados), e = etiquetas[v.fuente];
+      return '<div class="va-fila"><div class="va-nombre"><strong>' + esc(nombre) + '</strong><span class="estado ' + e[1] + '">' + e[0] + '</span></div>' +
+        '<label class="campo">Desde<input type="date" data-i="' + i + '" data-c="desde" value="' + (v.desde || '') + '"></label>' +
+        '<label class="campo">Hasta<input type="date" data-i="' + i + '" data-c="hasta" value="' + (v.hasta || '') + '"></label></div>';
+    }).join('') + '<div class="va-pie"><button type="submit" class="boton boton-primario boton-chico">Guardar fechas de ' + anioVa + '</button>' +
+      '<span class="ayuda">Al guardar, el asistente usa estas fechas desde ese momento.</span></div>';
+  }
+  $('va-form').addEventListener('submit', async function (ev) {
+    ev.preventDefault();
+    var msg = $('va-msg'), filas = [];
+    for (var i = 0; i < App.VACACIONES_FIJAS.length; i++) {
+      var d = this.querySelector('[data-i="' + i + '"][data-c="desde"]').value, h = this.querySelector('[data-i="' + i + '"][data-c="hasta"]').value;
+      if (!d && !h) continue;
+      if (!d || !h || h < d) { msg.className = 'mensaje error'; msg.textContent = 'Revise las fechas de ' + App.VACACIONES_FIJAS[i] + ': necesita «Desde» y «Hasta», y «Hasta» no puede ser antes de «Desde».'; msg.hidden = false; return; }
+      if (Number(d.slice(0, 4)) !== anioVa) { msg.className = 'mensaje error'; msg.textContent = 'La fecha «Desde» de ' + App.VACACIONES_FIJAS[i] + ' debe ser del año ' + anioVa + '.'; msg.hidden = false; return; }
+      filas.push({ nombre: App.VACACIONES_FIJAS[i], desde: d, hasta: h });
+    }
+    var b = this.querySelector('[type=submit]'); b.disabled = true;
+    // Reemplaza las fechas de ese año para estas tres vacaciones.
+    var borrar = feriados.filter(function (f) { return App.VACACIONES_FIJAS.indexOf(f.nombre) >= 0 && Number(String(f.desde).slice(0, 4)) === anioVa; }).map(function (f) { return f.id; });
+    var r = borrar.length ? await sb.from('feriados').delete().in('id', borrar) : { error: null };
+    if (!r.error && filas.length) r = await sb.from('feriados').insert(filas);
+    b.disabled = false;
+    if (r.error) { msg.className = 'mensaje error'; msg.textContent = 'No se pudo guardar: ' + r.error.message; msg.hidden = false; return; }
+    await cargarFeriados();
+    msg.className = 'mensaje ok'; msg.textContent = 'Fechas de ' + anioVa + ' guardadas: ' + filas.map(function (f) { return f.nombre + ' (' + fechaCorta(f.desde) + ' – ' + fechaCorta(f.hasta) + ')'; }).join(' · ') + '.'; msg.hidden = false;
+  });
+
   cargar();
+  cargarFeriados();
 })();

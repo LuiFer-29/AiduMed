@@ -48,6 +48,24 @@ window.AIDU_SB = {
 
     // Mientras el registro no se ha enviado, la sesión se cierra tras 1 hora sin actividad
     // (también si el médico vuelve después). Ya registrado, la sesión queda abierta para el día a día.
+    // Vacaciones de cada año: fechas fijadas por el administrador (tabla feriados) o calculadas.
+    VACACIONES_FIJAS: ['Semana Santa', 'Semana Morazánica', 'Navidad y Año Nuevo'],
+    pascua: function (a) {
+      var b = a % 19, c = Math.floor(a / 100), d = a % 100, e = Math.floor(c / 4), f = c % 4, g = Math.floor((c + 8) / 25), h = Math.floor((c - g + 1) / 3);
+      var i = (19 * b + c - e - h + 15) % 30, k = Math.floor(d / 4), l = d % 4, m = (32 + 2 * f + 2 * k - i - l) % 7, n = Math.floor((b + 11 * i + 22 * m) / 451);
+      var mes = Math.floor((i + m - 7 * n + 114) / 31), dia = ((i + m - 7 * n + 114) % 31) + 1;
+      return a + '-' + String(mes).padStart(2, '0') + '-' + String(dia).padStart(2, '0');
+    },
+    sumarDias: function (fecha, n) { var d = new Date(fecha + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); },
+    // { desde, hasta, fuente: 'fijada' | 'calculada' | 'pendiente' } de una vacación para el año dado.
+    vacacionDelAnio: function (nombre, anio, feriados) {
+      var f = (feriados || []).find(function (x) { return x.nombre === nombre && Number(String(x.desde).slice(0, 4)) === anio; });
+      if (f) return { desde: f.desde, hasta: f.hasta, fuente: 'fijada' };
+      if (nombre === 'Semana Santa') { var dom = App.pascua(anio); return { desde: App.sumarDias(dom, -6), hasta: dom, fuente: 'calculada' }; }
+      if (nombre === 'Navidad y Año Nuevo') return { desde: anio + '-12-24', hasta: (anio + 1) + '-01-01', fuente: 'calculada' };
+      return { desde: null, hasta: null, fuente: 'pendiente' };
+    },
+
     // Citas confirmadas (futuras) del médico que caen dentro de unos rangos de fechas {desde, hasta}.
     citasEnFechas: async function (uid, rangos) {
       if (!rangos || !rangos.length) return [];

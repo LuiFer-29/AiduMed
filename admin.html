@@ -11,10 +11,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=4">
-<link rel="stylesheet" href="/assets/css/app.css?v=16">
+<link rel="stylesheet" href="/assets/css/app.css?v=17">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
-<script src="/assets/js/app.js?v=16" defer></script>
-<script src="/assets/js/admin.js?v=14" defer></script>
+<script src="/assets/js/app.js?v=17" defer></script>
+<script src="/assets/js/admin.js?v=15" defer></script>
 </head>
 <body class="app">
 <header class="barra-app">
@@ -36,6 +36,15 @@
         <tbody id="filas"></tbody>
       </table>
     </div>
+
+    <section class="caja vacaciones-admin" id="vacaciones-admin">
+      <div class="caja-titulo">
+        <div><h2>Vacaciones de cada año</h2><p class="ayuda">Los médicos que marcaron estas vacaciones no reciben citas en estas fechas. Semana Santa y Navidad se calculan solas; la Semana Morazánica hay que definirla cuando el gobierno publique las fechas.</p></div>
+        <div class="pestanas-mini" role="tablist" aria-label="Año" id="va-anios"></div>
+      </div>
+      <form id="va-form" class="va-form"></form>
+      <p class="mensaje" id="va-msg" hidden></p>
+    </section>
   </div>
 </main>
 <div class="visor" id="visor" role="dialog" aria-modal="true" aria-label="Carné de colegiado" hidden>

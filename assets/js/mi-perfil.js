@@ -117,9 +117,17 @@
   var diaLocal = function (d) { return new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(d); };
   var ICONO_CAL = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>';
   var ICONO_BASURA = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+  var feriadosAnio = [];
+  var ICONO_SOL_MINI = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
   function pintarVacaciones() {
-    var vac = p.vacaciones || [];
-    $('vacaciones').innerHTML = vac.length ? vac.map(function (v) { return '<span class="chip">' + esc(v) + '</span>'; }).join('') : '<span class="ayuda">Sin vacaciones fijas.</span>';
+    // Vacaciones de cada año, con las fechas de la próxima vez que tocan.
+    var vac = p.vacaciones || [], hoyV = diaLocal(new Date()), anio = Number(hoyV.slice(0, 4));
+    $('vacaciones').innerHTML = vac.length ? '<ul class="lista-fechas-perfil fijas">' + vac.map(function (nombre) {
+      var v = App.vacacionDelAnio(nombre, anio, feriadosAnio);
+      if (v.hasta && v.hasta < hoyV) v = App.vacacionDelAnio(nombre, anio + 1, feriadosAnio);
+      var fechas = v.desde ? esc(App.rangoFechas({ desde: v.desde, hasta: v.hasta })) : '<em>Fecha por confirmar</em>';
+      return '<li>' + ICONO_SOL_MINI + '<span class="fecha-texto">' + esc(nombre) + '<span class="fecha-motivo">' + fechas + '</span></span><span class="etiqueta-anual">Cada año</span></li>';
+    }).join('') + '</ul>' : '<span class="ayuda">Sin vacaciones de cada año.</span>';
     var otras = p.otras_vacaciones || [];
     var hoy = diaLocal(new Date());
     // Solo fechas de hoy en adelante: las que ya pasaron desaparecen de la lista.
@@ -148,6 +156,7 @@
     });
   }
   pintarVacaciones();
+  App.sb.from('feriados').select('nombre, desde, hasta').then(function (r) { if (!r.error) { feriadosAnio = r.data || []; pintarVacaciones(); } });
 
   // ---------- Agregar una fecha sin consulta (formulario siempre vacío) ----------
   $('abrir-fecha').addEventListener('click', function () {
