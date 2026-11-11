@@ -17,52 +17,71 @@
     return;
   }
 
-  // ---------- Menú: Médicos / Vacaciones de cada año ----------
-  function mostrarSeccion() {
-    var sec = location.hash === '#vacaciones' ? 'vacaciones' : 'medicos';
-    $('vista-medicos').hidden = sec !== 'medicos';
-    $('vista-vacaciones').hidden = sec !== 'vacaciones';
-    document.querySelectorAll('.panel-menu [data-seccion]').forEach(function (a) {
-      if (a.dataset.seccion === sec) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
-    });
-  }
-  window.addEventListener('hashchange', mostrarSeccion);
-  mostrarSeccion();
-
+  // ---------- Menú: Médicos activos / Registros / Vacaciones de cada año ----------
   var medicos = [];
   var sinRegistro = [];
-  var filtro = new URLSearchParams(location.search).get('fotos') ? 'fotos' : 'en_revision';
-  var filtros = [
-    ['en_revision', 'Por revisar', 'Enviaron su registro completo y esperan su revisión.'],
-    ['aprobado', 'Aprobados', 'Usted ya los aprobó; falta configurar y probar su asistente de WhatsApp. Cuando esté funcionando, márquelos como activos.'],
-    ['activo', 'Activos', 'Su asistente ya está funcionando y recibiendo citas.'],
-    ['rechazado', 'Requieren cambios', 'Les pidió corregir algo; esperan que lo reenvíen.'],
-    ['borrador', 'Registro incompleto', 'Crearon su cuenta pero no han terminado el formulario (o ni siquiera lo empiezan: «Solo cuenta»). No requieren acción; puede escribirles para animarlos.'],
-    ['pausado', 'Pausados', 'Su asistente está detenido temporalmente.'],
-    ['todos', 'Todos', 'Todos los médicos registrados.'],
-    ['fotos', 'Fotos por aprobar', 'Médicos aprobados que subieron una foto de perfil nueva. No se publica hasta que usted la apruebe.']
-  ];
+  var FILTROS = {
+    borrador: ['Registro incompleto', 'Crearon su cuenta pero no han terminado el formulario (o ni siquiera lo empiezan: «Solo cuenta»). No requieren acción; puede escribirles para animarlos.'],
+    en_revision: ['Por revisar', 'Enviaron su registro completo y esperan su revisión.'],
+    rechazado: ['Requieren cambios', 'Les pidió corregir algo; esperan que lo reenvíen.'],
+    aprobado: ['Aprobados', 'Usted ya los aprobó; falta configurar y probar su asistente de WhatsApp. Cuando esté funcionando, márquelos como activos.'],
+    todos: ['Todos', 'Todos los médicos registrados, en cualquier estado.'],
+    activo: ['Activos', 'Su asistente ya está funcionando y recibiendo citas. Cualquier cambio aquí debe ser excepcional.'],
+    pausado: ['Pausados', 'Su asistente está detenido temporalmente.'],
+    fotos: ['Fotos por aprobar', 'Médicos aprobados que subieron una foto de perfil nueva. No se publica hasta que usted la apruebe.']
+  };
+  // Registros: en el orden en que avanza el proceso. Activos: los que ya operan.
+  var PAGINAS = {
+    registros: { titulo: 'Registros', filtros: ['borrador', 'en_revision', 'rechazado', 'aprobado', 'todos'], flujo: 4 },
+    activos: { titulo: 'Médicos activos', filtros: ['activo', 'pausado', 'fotos'], flujo: 0 }
+  };
+  var seccion = 'activos';
+  var filtro = 'activo';
+  function mostrarSeccion() {
+    var h = location.hash.replace('#', '');
+    if (new URLSearchParams(location.search).get('fotos') && !h) h = 'activos';
+    seccion = h === 'vacaciones' || h === 'registros' ? h : 'activos';
+    $('vista-medicos').hidden = seccion === 'vacaciones';
+    $('vista-vacaciones').hidden = seccion !== 'vacaciones';
+    document.querySelectorAll('.panel-menu [data-seccion]').forEach(function (a) {
+      if (a.dataset.seccion === seccion) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    if (seccion === 'vacaciones') return;
+    $('titulo-medicos').textContent = PAGINAS[seccion].titulo;
+    if (new URLSearchParams(location.search).get('fotos') && seccion === 'activos') filtro = 'fotos';
+    else filtro = seccion === 'activos' ? 'activo' : (cuenta('en_revision') ? 'en_revision' : 'borrador');
+    if (medicos.length || sinRegistro.length) pintar();
+  }
+  window.addEventListener('hashchange', mostrarSeccion);
 
   function conFoto() { return medicos.filter(function (m) { return !!m.foto_pendiente_path; }); }
   function fecha(t) { return t ? new Date(t).toLocaleDateString('es-HN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'; }
 
+  function cuenta(f) {
+    return f === 'todos' ? medicos.length + sinRegistro.length : f === 'fotos' ? conFoto().length
+      : medicos.filter(function (m) { return m.estado === f; }).length + (f === 'borrador' ? sinRegistro.length : 0);
+  }
   function pintarFiltros() {
-    $('filtros').innerHTML = filtros.map(function (f) {
-      var n = f[0] === 'todos' ? medicos.length + sinRegistro.length : f[0] === 'fotos' ? conFoto().length : medicos.filter(function (m) { return m.estado === f[0]; }).length + (f[0] === 'borrador' ? sinRegistro.length : 0);
-      if (f[0] === 'fotos' && !n && filtro !== 'fotos') return '';
-      return '<button type="button" data-f="' + f[0] + '" aria-pressed="' + (filtro === f[0]) + '">' + f[1] + ' (' + n + ')</button>';
+    var pag = PAGINAS[seccion] || PAGINAS.activos;
+    $('filtros').classList.toggle('filtros-flujo', !!pag.flujo);
+    $('filtros').innerHTML = pag.filtros.map(function (f, i) {
+      var n = cuenta(f);
+      if (f === 'fotos' && !n && filtro !== 'fotos') return '';
+      var flecha = pag.flujo && i > 0 && i < pag.flujo ? '<span class="flecha-flujo" aria-hidden="true">›</span>' : '';
+      var separador = pag.flujo && i === pag.flujo ? '<span class="separador-flujo" aria-hidden="true"></span>' : '';
+      return flecha + separador + '<button type="button" data-f="' + f + '" aria-pressed="' + (filtro === f) + '">' + FILTROS[f][0] + ' (' + n + ')</button>';
     }).join('');
     $('filtros').querySelectorAll('button').forEach(function (b) {
       b.addEventListener('click', function () { filtro = b.dataset.f; pintar(); });
     });
-    var actualF = filtros.find(function (f) { return f[0] === filtro; });
-    $('filtro-ayuda').textContent = actualF ? actualF[2] : '';
+    $('filtro-ayuda').textContent = FILTROS[filtro] ? FILTROS[filtro][1] : '';
   }
 
   function pintar() {
     pintarFiltros();
-    var porRevisar = medicos.filter(function (m) { return m.estado === 'en_revision' || m.foto_pendiente_path; }).length;
-    $('menu-revisar').textContent = porRevisar; $('menu-revisar').hidden = !porRevisar; $('menu-revisar').title = porRevisar + ' por revisar (registros o fotos)';
+    var porRevisar = cuenta('en_revision'), fotos = cuenta('fotos');
+    $('menu-revisar').textContent = porRevisar; $('menu-revisar').hidden = !porRevisar; $('menu-revisar').title = porRevisar + ' registros por revisar';
+    $('menu-fotos').textContent = fotos; $('menu-fotos').hidden = !fotos; $('menu-fotos').title = fotos + (fotos === 1 ? ' foto por aprobar' : ' fotos por aprobar');
     var lista = filtro === 'fotos' ? conFoto() : medicos.filter(function (m) { return filtro === 'todos' || m.estado === filtro; });
     var cuentas = (filtro === 'borrador' || filtro === 'todos') ? sinRegistro : [];
     if (!lista.length && !cuentas.length) { $('filas').innerHTML = '<tr><td colspan="6" class="vacio">No hay médicos en este estado.</td></tr>'; return; }
@@ -98,6 +117,7 @@
     sinRegistro = c.error ? [] : c.data || [];
     $('cargando').hidden = true;
     $('panel').hidden = false;
+    mostrarSeccion();
     pintar();
   }
 

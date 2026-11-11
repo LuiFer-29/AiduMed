@@ -11,10 +11,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=4">
-<link rel="stylesheet" href="/assets/css/app.css?v=17">
+<link rel="stylesheet" href="/assets/css/app.css?v=18">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
 <script src="/assets/js/app.js?v=17" defer></script>
-<script src="/assets/js/admin.js?v=16" defer></script>
+<script src="/assets/js/admin.js?v=17" defer></script>
 </head>
 <body class="app">
 <header class="barra-app">
@@ -28,9 +28,13 @@
   <div id="sin-permiso" class="caja" hidden><h2>No tiene acceso a esta página</h2><p>Esta sección es solo para el equipo de Aidú Med.</p></div>
   <div class="panel panel-admin" id="panel" hidden>
     <nav class="panel-menu" aria-label="Secciones de administración">
-      <a href="#medicos" data-seccion="medicos" aria-current="page">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 11h5M19.5 8.5v5"/></svg>
-        <span>Médicos</span><b class="menu-cuenta" id="menu-revisar" hidden></b>
+      <a href="#activos" data-seccion="activos" aria-current="page">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M16 11l2 2l4-4"/></svg>
+        <span>Médicos activos</span><b class="menu-cuenta" id="menu-fotos" hidden></b>
+      </a>
+      <a href="#registros" data-seccion="registros">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6l1 2h3v15H5V6h3z"/><path d="M9 12h6M9 16h4"/></svg>
+        <span>Registros</span><b class="menu-cuenta" id="menu-revisar" hidden></b>
       </a>
       <a href="#vacaciones" data-seccion="vacaciones">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
@@ -42,7 +46,7 @@
       </a>
     </nav>
     <div class="panel-vista admin-vista" id="vista-medicos">
-    <div class="titulo-admin"><h1>Médicos registrados</h1></div>
+    <div class="titulo-admin"><h1 id="titulo-medicos">Médicos activos</h1></div>
     <div class="filtros" role="group" aria-label="Filtrar por estado" id="filtros"></div>
     <p class="filtro-ayuda" id="filtro-ayuda"></p>
     <div class="tabla-caja">

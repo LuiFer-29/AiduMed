@@ -362,3 +362,7 @@ figcaption .enlace-boton { padding: 0; font-size: 13px; }
   .admin .panel-menu { flex-wrap: wrap; }
   .admin .panel-menu > a { flex: 1 1 auto; font-size: 14px; }
 }
+/* Registros: los pasos del proceso en orden */
+.filtros-flujo { align-items: center; }
+.flecha-flujo { color: #9AA7A4; font-size: 20px; font-weight: 700; margin: 0 -2px; }
+.separador-flujo { width: 1px; height: 28px; background: var(--borde-fuerte); margin: 0 6px; }
