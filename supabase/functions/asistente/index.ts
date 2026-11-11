@@ -19,7 +19,12 @@ const claveServicio = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
   (() => { try { return JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}").default; } catch { return ""; } })();
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, claveServicio, { auth: { persistSession: false } });
 const almacen = crearAlmacen(sb);
-const cerebro = crearCerebro(Deno.env.get("ANTHROPIC_API_KEY"));
+// Precio de Claude Haiku por millón de tokens (USD), para el panel de costos.
+const TARIFA_IA = { entrada: 1, salida: 5 };
+const cerebro = crearCerebro(Deno.env.get("ANTHROPIC_API_KEY"), (medicoId, entrada, salida, modelo) => {
+  const costo = (entrada * TARIFA_IA.entrada + salida * TARIFA_IA.salida) / 1e6;
+  sb.from("ia_uso").insert({ medico_id: medicoId, tokens_entrada: entrada, tokens_salida: salida, modelo, costo_usd: costo }).then(() => {});
+});
 
 const ORIGENES = ["https://aidumed.app", "https://www.aidumed.app", "https://aidumed.netlify.app"];
 function cors(req: Request): Record<string, string> {
@@ -49,6 +54,7 @@ Deno.serve(async (req) => {
 
   if (req.method === "POST" && ruta === "simular") return simular(req);
   if (req.method === "POST" && ruta === "panel") return panel(req);
+  if (req.method === "POST" && ruta === "costos") return costos(req);
   if (req.method === "POST" && (ruta === "recordatorios" || ruta === "evento" || ruta === "meta")) {
     if (req.headers.get("x-aviso-secreto") !== Deno.env.get("AVISO_SECRETO")) return new Response("No autorizado", { status: 401 });
     return ruta === "recordatorios" ? recordatorios() : ruta === "evento" ? evento(req) : meta(req);
@@ -72,10 +78,11 @@ async function webhook(req: Request): Promise<Response> {
       await almacen.registrar(m.telefono, "entrante", m.crudo, m.metaId);
       marcarLeido(m.metaId);
       const salidas = await atender(m, { almacen, avisos, cerebro, ahora: new Date() });
+      const medicoId = await almacen.medicoDeConversacion(m.telefono);
       for (const s of salidas) {
         const carga = cargaUtil(m.telefono, s);
         const id = await enviar(m.telefono, carga);
-        await almacen.registrar(m.telefono, "saliente", carga, id);
+        await almacen.registrar(m.telefono, "saliente", carga, id, medicoId);
       }
     } catch (e) {
       console.error("Error atendiendo", m.telefono, e);
@@ -131,7 +138,7 @@ async function recordatorios(): Promise<Response> {
     if (!whatsappListo()) { pendientes++; continue; }
     const carga = recordatorio(tel, fila as Cita, fila.medicos as Medico);
     const id = await enviar(tel, carga);
-    await almacen.registrar(tel, "saliente", carga, id);
+    await almacen.registrar(tel, "saliente", carga, id, fila.medico_id);
     if (id) {
       enviados++;
       await sb.from("citas").update({ recordatorio_at: new Date().toISOString() }).eq("id", fila.id);
@@ -155,7 +162,7 @@ async function evento(req: Request): Promise<Response> {
   if (!r.data || !tel || esSimulado(tel) || !whatsappListo()) return new Response("Sin envío");
   const carga = canceladaPorConsultorio(tel, r.data as Cita, r.data.medicos as Medico);
   const id = await enviar(tel, carga);
-  await almacen.registrar(tel, "saliente", carga, id);
+  await almacen.registrar(tel, "saliente", carga, id, r.data.medico_id);
   return new Response(id ? "Enviado" : "Error al enviar");
 }
 
@@ -209,12 +216,109 @@ async function panel(req: Request): Promise<Response> {
     const enVentana = !!ult.data?.length;
     const carga = enVentana ? cargaUtil(tel, { tipo: "texto", texto: turnoListoTexto(r.data as Cita, m) }) : turnoListo(tel, r.data as Cita, m);
     const id = await enviar(tel, carga);
-    await almacen.registrar(tel, "saliente", carga, id);
+    await almacen.registrar(tel, "saliente", carga, id, uid);
     if (!id) return json(req, { error: "WhatsApp no aceptó el mensaje. Intente de nuevo en un momento." }, 502);
     await sb.from("citas").update({ llamado_at: ahora }).eq("id", r.data.id);
     return json(req, { ok: true, via: enVentana ? "texto" : "plantilla", llamado_at: ahora });
   }
   return json(req, { error: "Acción no válida" }, 400);
+}
+
+// ---------- Costos y uso (panel de administración) ----------
+async function todas<T>(consulta: (desde: number, hasta: number) => PromiseLike<{ data: T[] | null; error: any }>): Promise<T[]> {
+  const filas: T[] = [];
+  for (let i = 0; ; i += 1000) {
+    const r = await consulta(i, i + 999);
+    if (r.error) throw r.error;
+    filas.push(...(r.data || []));
+    if (!r.data || r.data.length < 1000) return filas;
+  }
+}
+
+async function costos(req: Request): Promise<Response> {
+  const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  const u = await sb.auth.getUser(token);
+  if (u.error || !u.data.user) return json(req, { error: "Inicie sesión de nuevo." }, 401);
+  const admin = await sb.from("admins").select("user_id").eq("user_id", u.data.user.id).maybeSingle();
+  if (!admin.data) return json(req, { error: "Solo administradores." }, 403);
+
+  const { hasta: mesHasta, meses: nMeses } = await req.json().catch(() => ({}));
+  const n = Math.min(Math.max(Number(nMeses) || 6, 1), 24);
+  if (!/^\d{4}-\d{2}$/.test(String(mesHasta || ""))) return json(req, { error: "Mes no válido" }, 400);
+  // Meses en hora de Honduras (UTC-6), del más antiguo al pedido.
+  const lista: string[] = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const [a, m] = mesHasta.split("-").map(Number);
+    const d = new Date(Date.UTC(a, m - 1 - i, 1));
+    lista.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
+  }
+  const inicioMes = (ym: string) => new Date(`${ym}-01T00:00:00-06:00`);
+  const desde = inicioMes(lista[0]);
+  const [ua, um] = mesHasta.split("-").map(Number);
+  const fin = new Date(Date.UTC(ua, um, 1, 6)); // primer día del mes siguiente, 00:00 en Honduras
+  const mesDe = (iso: string) => new Date(new Date(iso).getTime() - 6 * 3600_000).toISOString().slice(0, 7);
+
+  const [mensajes, citas, ia] = await Promise.all([
+    todas<{ creado_at: string; medico_id: string | null; tipo: string | null; contenido: any; telefono: string }>((a, b) =>
+      sb.from("mensajes").select("creado_at, medico_id, tipo, contenido, telefono").eq("direccion", "saliente").not("telefono", "like", "sim%")
+        .gte("creado_at", desde.toISOString()).lt("creado_at", fin.toISOString()).order("id").range(a, b)),
+    todas<{ creada_at: string; medico_id: string; pacientes: { telefono: string } | null }>((a, b) =>
+      sb.from("citas").select("creada_at, medico_id, pacientes(telefono)").gte("creada_at", desde.toISOString()).lt("creada_at", fin.toISOString()).order("id").range(a, b)),
+    todas<{ creado_at: string; medico_id: string | null; costo_usd: number; tokens_entrada: number; tokens_salida: number }>((a, b) =>
+      sb.from("ia_uso").select("creado_at, medico_id, costo_usd, tokens_entrada, tokens_salida").gte("creado_at", desde.toISOString()).lt("creado_at", fin.toISOString()).order("id").range(a, b)),
+  ]);
+
+  type Uso = { citas: number; servicio: number; plantilla: number; ia: number };
+  const vacio = (): Uso => ({ citas: 0, servicio: 0, plantilla: 0, ia: 0 });
+  const porMes: Record<string, Uso & { medicos: Record<string, Uso>; sin_medico: Uso }> = {};
+  for (const ym of lista) porMes[ym] = { ...vacio(), medicos: {}, sin_medico: vacio() };
+  const de = (ym: string, id: string | null) => {
+    const mes = porMes[ym];
+    if (!mes) return null;
+    if (!id) return mes.sin_medico;
+    return (mes.medicos[id] ||= vacio());
+  };
+  for (const x of mensajes) {
+    const ym = mesDe(x.creado_at);
+    const tipo = x.tipo || (x.contenido?.type === "template" ? "plantilla" : "servicio");
+    const k = tipo === "plantilla" ? "plantilla" : "servicio";
+    if (!porMes[ym]) continue;
+    porMes[ym][k]++;
+    de(ym, x.medico_id)![k]++;
+  }
+  for (const c of citas) {
+    if (c.pacientes?.telefono?.startsWith("sim")) continue;
+    const ym = mesDe(c.creada_at);
+    if (!porMes[ym]) continue;
+    porMes[ym].citas++;
+    de(ym, c.medico_id)!.citas++;
+  }
+  for (const x of ia) {
+    const ym = mesDe(x.creado_at);
+    if (!porMes[ym]) continue;
+    porMes[ym].ia += Number(x.costo_usd) || 0;
+    de(ym, x.medico_id)!.ia += Number(x.costo_usd) || 0;
+  }
+
+  // Costo real que reporta Meta (si el token tiene permiso).
+  let meta: { porMes: Record<string, number>; error?: string } = { porMes: {} };
+  const waba = Deno.env.get("WA_WABA_ID") || "1490208389720856";
+  if (Deno.env.get("WA_TOKEN")) {
+    try {
+      const ini = Math.floor(desde.getTime() / 1000), hasta = Math.floor(Math.min(fin.getTime(), Date.now()) / 1000);
+      const campos = `pricing_analytics.start(${ini}).end(${hasta}).granularity(DAILY)`;
+      const r = await fetch(`https://graph.facebook.com/${Deno.env.get("WA_API_VERSION") || "v25.0"}/${waba}?fields=${encodeURIComponent(campos)}`, { headers: { authorization: `Bearer ${Deno.env.get("WA_TOKEN")}` } });
+      const j = await r.json();
+      if (!r.ok) meta.error = j?.error?.message || `Error ${r.status}`;
+      for (const p of j?.pricing_analytics?.data?.[0]?.data_points || []) {
+        const ym = mesDe(new Date(Number(p.start) * 1000).toISOString());
+        meta.porMes[ym] = (meta.porMes[ym] || 0) + (Number(p.cost) || 0);
+      }
+    } catch (e) {
+      meta.error = String(e);
+    }
+  }
+  return json(req, { meses: lista, porMes, meta });
 }
 
 // ---------- Mantenimiento con Meta (uso interno) ----------

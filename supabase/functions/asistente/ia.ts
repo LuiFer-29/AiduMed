@@ -47,7 +47,8 @@ function contexto(ctx: ContextoIA): string {
   ].filter(Boolean).join("\n");
 }
 
-export function crearCerebro(apiKey: string | undefined): Cerebro {
+/** alUsar: se llama con los tokens de cada consulta (para el panel de costos). */
+export function crearCerebro(apiKey: string | undefined, alUsar?: (medicoId: string | null, entrada: number, salida: number, modelo: string) => void): Cerebro {
   return {
     async interpretar(texto, ctx): Promise<Interpretacion | null> {
       if (!apiKey) return null;
@@ -89,6 +90,7 @@ export function crearCerebro(apiKey: string | undefined): Cerebro {
           return null;
         }
         const j = await r.json();
+        try { alUsar?.(ctx.medico?.id ?? null, j.usage?.input_tokens || 0, j.usage?.output_tokens || 0, MODELO); } catch (_) { /* no bloquear */ }
         const uso = j.content?.find((c: any) => c.type === "tool_use");
         return (uso?.input as Interpretacion) || null;
       } catch (e) {

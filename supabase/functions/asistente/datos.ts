@@ -5,7 +5,8 @@ import type { Almacen, Cita, Medico } from "./flujo.ts";
 const sinAcentos = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 export function crearAlmacen(sb: SupabaseClient): Almacen & {
-  registrar(telefono: string, direccion: "entrante" | "saliente", contenido: unknown, metaId?: string | null): Promise<void>;
+  registrar(telefono: string, direccion: "entrante" | "saliente", contenido: unknown, metaId?: string | null, medicoId?: string | null): Promise<void>;
+  medicoDeConversacion(telefono: string): Promise<string | null>;
   yaProcesado(metaId: string): Promise<boolean>;
 } {
   const falla = (r: { error: any }) => { if (r.error) throw r.error; };
@@ -104,8 +105,16 @@ export function crearAlmacen(sb: SupabaseClient): Almacen & {
     async guardarProspecto(telefono, nombre, mensaje) {
       falla(await sb.from("prospectos").insert({ telefono, nombre, mensaje }));
     },
-    async registrar(telefono, direccion, contenido, metaId) {
-      await sb.from("mensajes").insert({ telefono, direccion, contenido, meta_id: metaId || null });
+    async registrar(telefono, direccion, contenido, metaId, medicoId) {
+      const fila: Record<string, unknown> = { telefono, direccion, contenido, meta_id: metaId || null };
+      if (medicoId !== undefined) fila.medico_id = medicoId;
+      // Los mensajes que enviamos llevan el tipo, para estimar el costo (plantilla o mensaje de servicio).
+      if (direccion === "saliente") fila.tipo = (contenido as any)?.type === "template" ? "plantilla" : "servicio";
+      await sb.from("mensajes").insert(fila);
+    },
+    async medicoDeConversacion(telefono) {
+      const r = await sb.from("conversaciones").select("medico_id").eq("telefono", telefono).maybeSingle();
+      return (r.data?.medico_id as string) || null;
     },
     async yaProcesado(metaId) {
       const r = await sb.from("mensajes").select("id").eq("meta_id", metaId).limit(1);

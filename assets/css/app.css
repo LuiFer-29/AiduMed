@@ -366,3 +366,39 @@ figcaption .enlace-boton { padding: 0; font-size: 13px; }
 .filtros-flujo { align-items: center; }
 .flecha-flujo { color: #9AA7A4; font-size: 20px; font-weight: 700; margin: 0 -2px; }
 .separador-flujo { width: 1px; height: 28px; background: var(--borde-fuerte); margin: 0 6px; }
+/* Costos y uso */
+.costos-titulo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.costos-controles { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.campo-linea { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--texto-2); }
+.campo-linea select, .campo-linea input { height: 38px; padding: 0 10px; border: 1px solid var(--borde-fuerte); border-radius: 10px; font-family: inherit; font-size: 14px; background: var(--blanco); color: var(--tinta); }
+.campo-linea input { width: 90px; }
+.tarjetas-costos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1000px) { .tarjetas-costos { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tarjeta-costo { background: var(--blanco); border: 1px solid var(--borde); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tarjeta-costo span { font-size: 13px; font-weight: 700; color: var(--texto-2); }
+.tarjeta-costo strong { font-size: 26px; font-weight: 800; color: var(--tinta); line-height: 1.15; }
+.tarjeta-costo small { font-size: 12.5px; line-height: 1.45; color: var(--texto-2); }
+.tarjeta-costo.destacada { background: #FFF6EF; border-color: #F4C9AE; }
+.tarjeta-costo.positiva strong { color: var(--verde-oscuro); }
+.tarjeta-costo.negativa strong { color: #B42318; }
+.avisos-costos { display: flex; flex-direction: column; gap: 8px; }
+.avisos-costos:empty { display: none; }
+.aviso-costo { padding: 10px 14px; border-radius: 12px; background: #FFF8EB; border: 1px solid #F0C77A; color: #7A4B00; font-size: 14px; font-weight: 600; }
+.grafica-costos svg { width: 100%; height: auto; display: block; }
+.punto-leyenda { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin: 0 4px 0 12px; vertical-align: middle; }
+.tabla-costos .num, .tabla-gastos .num { text-align: right; }
+.margen-bajo { color: #B42318; font-weight: 700; }
+.tabla-gastos input[type="text"], .tabla-gastos input[type="date"], .tabla-gastos input[type="number"] { width: 100%; min-width: 0; height: 38px; padding: 0 8px; border: 1px solid transparent; border-radius: 8px; font-family: inherit; font-size: 14px; background: transparent; color: var(--tinta); }
+.tabla-gastos input:hover, .tabla-gastos input:focus { border-color: var(--borde-fuerte); background: var(--blanco); }
+.tabla-gastos input[type="number"] { text-align: right; }
+.tabla-gastos input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--verde); }
+.tabla-gastos td { vertical-align: middle; }
+.tabla-gastos tr:hover { background: transparent; cursor: default; }
+.tabla-gastos { table-layout: fixed; min-width: 760px; }
+.tabla-gastos th:nth-child(1) { width: 142px; }
+.tabla-gastos th:nth-child(3) { width: 130px; }
+.tabla-gastos th:nth-child(4) { width: 104px; }
+.tabla-gastos th:nth-child(5) { width: 74px; }
+.tabla-gastos th:nth-child(6) { width: 142px; }
+.tabla-gastos th:nth-child(7) { width: 48px; }
+.tabla-gastos td, .tabla-gastos th { padding: 8px 8px; }

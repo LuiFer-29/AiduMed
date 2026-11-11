@@ -260,8 +260,15 @@ function crearAlmacen(sb2) {
     async guardarProspecto(telefono, nombre, mensaje) {
       falla(await sb2.from("prospectos").insert({ telefono, nombre, mensaje }));
     },
-    async registrar(telefono, direccion, contenido, metaId) {
-      await sb2.from("mensajes").insert({ telefono, direccion, contenido, meta_id: metaId || null });
+    async registrar(telefono, direccion, contenido, metaId, medicoId) {
+      const fila = { telefono, direccion, contenido, meta_id: metaId || null };
+      if (medicoId !== void 0) fila.medico_id = medicoId;
+      if (direccion === "saliente") fila.tipo = contenido?.type === "template" ? "plantilla" : "servicio";
+      await sb2.from("mensajes").insert(fila);
+    },
+    async medicoDeConversacion(telefono) {
+      const r = await sb2.from("conversaciones").select("medico_id").eq("telefono", telefono).maybeSingle();
+      return r.data?.medico_id || null;
     },
     async yaProcesado(metaId) {
       const r = await sb2.from("mensajes").select("id").eq("meta_id", metaId).limit(1);
@@ -1301,7 +1308,7 @@ ${servicios || "- (sin servicios)"}`,
     m.descripcion ? `Sobre el m\xE9dico: ${m.descripcion}` : ""
   ].filter(Boolean).join("\n");
 }
-function crearCerebro(apiKey) {
+function crearCerebro(apiKey, alUsar) {
   return {
     async interpretar(texto2, ctx) {
       if (!apiKey) return null;
@@ -1343,6 +1350,10 @@ function crearCerebro(apiKey) {
           return null;
         }
         const j = await r.json();
+        try {
+          alUsar?.(ctx.medico?.id ?? null, j.usage?.input_tokens || 0, j.usage?.output_tokens || 0, MODELO);
+        } catch (_) {
+        }
         const uso = j.content?.find((c) => c.type === "tool_use");
         return uso?.input || null;
       } catch (e) {
@@ -1551,7 +1562,12 @@ var claveServicio = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || (() => {
 })();
 var sb = createClient(Deno.env.get("SUPABASE_URL"), claveServicio, { auth: { persistSession: false } });
 var almacen = crearAlmacen(sb);
-var cerebro = crearCerebro(Deno.env.get("ANTHROPIC_API_KEY"));
+var TARIFA_IA = { entrada: 1, salida: 5 };
+var cerebro = crearCerebro(Deno.env.get("ANTHROPIC_API_KEY"), (medicoId, entrada, salida, modelo) => {
+  const costo = (entrada * TARIFA_IA.entrada + salida * TARIFA_IA.salida) / 1e6;
+  sb.from("ia_uso").insert({ medico_id: medicoId, tokens_entrada: entrada, tokens_salida: salida, modelo, costo_usd: costo }).then(() => {
+  });
+});
 var ORIGENES = ["https://aidumed.app", "https://www.aidumed.app", "https://aidumed.netlify.app"];
 function cors(req) {
   const o = req.headers.get("origin") || "";
@@ -1575,6 +1591,7 @@ Deno.serve(async (req) => {
   }
   if (req.method === "POST" && ruta === "simular") return simular(req);
   if (req.method === "POST" && ruta === "panel") return panel(req);
+  if (req.method === "POST" && ruta === "costos") return costos(req);
   if (req.method === "POST" && (ruta === "recordatorios" || ruta === "evento" || ruta === "meta")) {
     if (req.headers.get("x-aviso-secreto") !== Deno.env.get("AVISO_SECRETO")) return new Response("No autorizado", { status: 401 });
     return ruta === "recordatorios" ? recordatorios() : ruta === "evento" ? evento(req) : meta(req);
@@ -1600,10 +1617,11 @@ async function webhook(req) {
       await almacen.registrar(m.telefono, "entrante", m.crudo, m.metaId);
       marcarLeido(m.metaId);
       const salidas = await atender(m, { almacen, avisos, cerebro, ahora: /* @__PURE__ */ new Date() });
+      const medicoId = await almacen.medicoDeConversacion(m.telefono);
       for (const s of salidas) {
         const carga = cargaUtil(m.telefono, s);
         const id = await enviar(m.telefono, carga);
-        await almacen.registrar(m.telefono, "saliente", carga, id);
+        await almacen.registrar(m.telefono, "saliente", carga, id, medicoId);
       }
     } catch (e) {
       console.error("Error atendiendo", m.telefono, e);
@@ -1653,7 +1671,7 @@ async function recordatorios() {
     }
     const carga = recordatorio(tel, fila, fila.medicos);
     const id = await enviar(tel, carga);
-    await almacen.registrar(tel, "saliente", carga, id);
+    await almacen.registrar(tel, "saliente", carga, id, fila.medico_id);
     if (id) {
       enviados++;
       await sb.from("citas").update({ recordatorio_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", fila.id);
@@ -1676,7 +1694,7 @@ async function evento(req) {
   if (!r.data || !tel || esSimulado(tel) || !whatsappListo()) return new Response("Sin env\xEDo");
   const carga = canceladaPorConsultorio(tel, r.data, r.data.medicos);
   const id = await enviar(tel, carga);
-  await almacen.registrar(tel, "saliente", carga, id);
+  await almacen.registrar(tel, "saliente", carga, id, r.data.medico_id);
   return new Response(id ? "Enviado" : "Error al enviar");
 }
 async function panel(req) {
@@ -1721,12 +1739,95 @@ async function panel(req) {
     const enVentana = !!ult.data?.length;
     const carga = enVentana ? cargaUtil(tel, { tipo: "texto", texto: turnoListoTexto(r.data, m) }) : turnoListo(tel, r.data, m);
     const id = await enviar(tel, carga);
-    await almacen.registrar(tel, "saliente", carga, id);
+    await almacen.registrar(tel, "saliente", carga, id, uid);
     if (!id) return json(req, { error: "WhatsApp no acept\xF3 el mensaje. Intente de nuevo en un momento." }, 502);
     await sb.from("citas").update({ llamado_at: ahora }).eq("id", r.data.id);
     return json(req, { ok: true, via: enVentana ? "texto" : "plantilla", llamado_at: ahora });
   }
   return json(req, { error: "Acci\xF3n no v\xE1lida" }, 400);
+}
+async function todas(consulta) {
+  const filas = [];
+  for (let i = 0; ; i += 1e3) {
+    const r = await consulta(i, i + 999);
+    if (r.error) throw r.error;
+    filas.push(...r.data || []);
+    if (!r.data || r.data.length < 1e3) return filas;
+  }
+}
+async function costos(req) {
+  const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  const u = await sb.auth.getUser(token);
+  if (u.error || !u.data.user) return json(req, { error: "Inicie sesi\xF3n de nuevo." }, 401);
+  const admin = await sb.from("admins").select("user_id").eq("user_id", u.data.user.id).maybeSingle();
+  if (!admin.data) return json(req, { error: "Solo administradores." }, 403);
+  const { hasta: mesHasta, meses: nMeses } = await req.json().catch(() => ({}));
+  const n = Math.min(Math.max(Number(nMeses) || 6, 1), 24);
+  if (!/^\d{4}-\d{2}$/.test(String(mesHasta || ""))) return json(req, { error: "Mes no v\xE1lido" }, 400);
+  const lista = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const [a, m] = mesHasta.split("-").map(Number);
+    const d = new Date(Date.UTC(a, m - 1 - i, 1));
+    lista.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
+  }
+  const inicioMes = (ym) => /* @__PURE__ */ new Date(`${ym}-01T00:00:00-06:00`);
+  const desde = inicioMes(lista[0]);
+  const [ua, um] = mesHasta.split("-").map(Number);
+  const fin = new Date(Date.UTC(ua, um, 1, 6));
+  const mesDe = (iso) => new Date(new Date(iso).getTime() - 6 * 36e5).toISOString().slice(0, 7);
+  const [mensajes, citas, ia] = await Promise.all([
+    todas((a, b) => sb.from("mensajes").select("creado_at, medico_id, tipo, contenido, telefono").eq("direccion", "saliente").not("telefono", "like", "sim%").gte("creado_at", desde.toISOString()).lt("creado_at", fin.toISOString()).order("id").range(a, b)),
+    todas((a, b) => sb.from("citas").select("creada_at, medico_id, pacientes(telefono)").gte("creada_at", desde.toISOString()).lt("creada_at", fin.toISOString()).order("id").range(a, b)),
+    todas((a, b) => sb.from("ia_uso").select("creado_at, medico_id, costo_usd, tokens_entrada, tokens_salida").gte("creado_at", desde.toISOString()).lt("creado_at", fin.toISOString()).order("id").range(a, b))
+  ]);
+  const vacio = () => ({ citas: 0, servicio: 0, plantilla: 0, ia: 0 });
+  const porMes = {};
+  for (const ym of lista) porMes[ym] = { ...vacio(), medicos: {}, sin_medico: vacio() };
+  const de = (ym, id) => {
+    const mes = porMes[ym];
+    if (!mes) return null;
+    if (!id) return mes.sin_medico;
+    return mes.medicos[id] ||= vacio();
+  };
+  for (const x of mensajes) {
+    const ym = mesDe(x.creado_at);
+    const tipo = x.tipo || (x.contenido?.type === "template" ? "plantilla" : "servicio");
+    const k = tipo === "plantilla" ? "plantilla" : "servicio";
+    if (!porMes[ym]) continue;
+    porMes[ym][k]++;
+    de(ym, x.medico_id)[k]++;
+  }
+  for (const c of citas) {
+    if (c.pacientes?.telefono?.startsWith("sim")) continue;
+    const ym = mesDe(c.creada_at);
+    if (!porMes[ym]) continue;
+    porMes[ym].citas++;
+    de(ym, c.medico_id).citas++;
+  }
+  for (const x of ia) {
+    const ym = mesDe(x.creado_at);
+    if (!porMes[ym]) continue;
+    porMes[ym].ia += Number(x.costo_usd) || 0;
+    de(ym, x.medico_id).ia += Number(x.costo_usd) || 0;
+  }
+  let meta2 = { porMes: {} };
+  const waba = Deno.env.get("WA_WABA_ID") || "1490208389720856";
+  if (Deno.env.get("WA_TOKEN")) {
+    try {
+      const ini = Math.floor(desde.getTime() / 1e3), hasta = Math.floor(Math.min(fin.getTime(), Date.now()) / 1e3);
+      const campos = `pricing_analytics.start(${ini}).end(${hasta}).granularity(DAILY)`;
+      const r = await fetch(`https://graph.facebook.com/${Deno.env.get("WA_API_VERSION") || "v25.0"}/${waba}?fields=${encodeURIComponent(campos)}`, { headers: { authorization: `Bearer ${Deno.env.get("WA_TOKEN")}` } });
+      const j = await r.json();
+      if (!r.ok) meta2.error = j?.error?.message || `Error ${r.status}`;
+      for (const p of j?.pricing_analytics?.data?.[0]?.data_points || []) {
+        const ym = mesDe(new Date(Number(p.start) * 1e3).toISOString());
+        meta2.porMes[ym] = (meta2.porMes[ym] || 0) + (Number(p.cost) || 0);
+      }
+    } catch (e) {
+      meta2.error = String(e);
+    }
+  }
+  return json(req, { meses: lista, porMes, meta: meta2 });
 }
 async function meta(req) {
   const { accion, waba, solo } = await req.json().catch(() => ({}));

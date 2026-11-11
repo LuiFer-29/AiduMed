@@ -11,10 +11,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=4">
-<link rel="stylesheet" href="/assets/css/app.css?v=18">
+<link rel="stylesheet" href="/assets/css/app.css?v=19">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
 <script src="/assets/js/app.js?v=17" defer></script>
-<script src="/assets/js/admin.js?v=17" defer></script>
+<script src="/assets/js/admin.js?v=18" defer></script>
 </head>
 <body class="app">
 <header class="barra-app">
@@ -40,6 +40,10 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
         <span>Vacaciones de cada año</span><b class="menu-cuenta menu-alerta" id="menu-vacaciones" hidden>!</b>
       </a>
+      <a href="#costos" data-seccion="costos">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4l3 3l5-6"/></svg>
+        <span>Costos y uso</span><b class="menu-cuenta menu-alerta" id="menu-costos" hidden>!</b>
+      </a>
       <a href="/admin/simulador">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>
         <span>Probar el asistente</span>
@@ -57,6 +61,37 @@
     </div>
 
     </div>
+    <div class="panel-vista admin-vista" id="vista-costos" hidden>
+      <div class="titulo-admin costos-titulo">
+        <h1>Costos y uso</h1>
+        <div class="costos-controles">
+          <label class="campo-linea">Mes <select id="co-mes"></select></label>
+          <div class="pestanas-mini" role="tablist" aria-label="Moneda">
+            <button type="button" role="tab" aria-selected="true" data-moneda="USD">USD</button>
+            <button type="button" role="tab" aria-selected="false" data-moneda="HNL">Lempiras</button>
+          </div>
+          <label class="campo-linea">Tasa L <input type="number" id="co-tasa" step="0.01" min="1" inputmode="decimal"></label>
+          <button type="button" class="boton boton-secundario boton-chico" id="co-guardar-tasa" hidden>Guardar tasa</button>
+        </div>
+      </div>
+      <div class="avisos-costos" id="co-avisos"></div>
+      <div class="tarjetas-costos" id="co-tarjetas"><p class="ayuda">Cargando…</p></div>
+      <section class="caja">
+        <div class="caja-titulo"><h2>Gasto e ingreso por mes</h2><span class="ayuda" id="co-leyenda"></span></div>
+        <div id="co-grafica" class="grafica-costos"></div>
+      </section>
+      <section class="caja">
+        <div class="caja-titulo"><h2>Por médico</h2><span class="ayuda">Costo de WhatsApp repartido según los mensajes de cada médico, más su uso de IA.</span></div>
+        <div class="tabla-caja"><table class="tabla tabla-costos"><thead><tr><th>Médico</th><th>Plan</th><th class="num">Citas</th><th class="num">Mensajes</th><th class="num">Costo</th><th class="num">Costo por cita</th><th class="num">Ingreso</th><th class="num">Margen</th></tr></thead><tbody id="co-medicos"></tbody></table></div>
+      </section>
+      <section class="caja">
+        <div class="caja-titulo"><h2>Gastos operativos</h2><button type="button" class="boton boton-primario boton-chico" id="co-agregar">+ Agregar gasto</button></div>
+        <p class="ayuda">Todo gasto que quiera imputar: servicios, dominio, publicidad, viáticos… Los montos van en dólares. Marque «Mensual» si se repite cada mes.</p>
+        <div class="tabla-caja"><table class="tabla tabla-gastos"><thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th class="num">Monto (USD)</th><th>Mensual</th><th>Hasta</th><th></th></tr></thead><tbody id="co-gastos"></tbody></table></div>
+        <p class="mensaje" id="co-msg" hidden></p>
+      </section>
+    </div>
+
     <div class="panel-vista admin-vista" id="vista-vacaciones" hidden>
     <div class="titulo-admin"><h1>Vacaciones de cada año</h1></div>
     <section class="caja vacaciones-admin" id="vacaciones-admin">
