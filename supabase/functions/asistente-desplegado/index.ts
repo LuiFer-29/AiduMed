@@ -68,8 +68,8 @@ var cuando = (c) => {
   return `${fechaLarga(fechaLocal(i))}, ${hora12(i)}`;
 };
 var telefonoBonito = (t) => t.startsWith("504") && t.length === 11 ? `+504 ${t.slice(3, 7)}-${t.slice(7)}` : `+${t}`;
-function html(titulo, filas, nota, boton = ["Ver mis citas", "https://aidumed.app/mi-perfil"], pie = "Aviso autom\xE1tico de su asistente de citas \xB7 Aid\xFA Med") {
-  const tabla = filas.map(([k, v]) => `<tr><td style="padding:6px 12px 6px 0;font-size:14px;color:#4A5A57;white-space:nowrap;vertical-align:top;">${esc(k)}</td><td style="padding:6px 0;font-size:15px;font-weight:bold;color:#10211F;">${v}</td></tr>`).join("");
+function html(titulo, filas, nota, boton = ["Ver mis citas", "https://aidumed.app/mi-perfil"], pie = "Aviso autom\xE1tico de su asistente de citas \xB7 Aid\xFA Med", valoresNormales = false) {
+  const tabla = filas.map(([k, v]) => `<tr><td style="padding:6px 12px 6px 0;font-size:14px;color:#4A5A57;white-space:nowrap;vertical-align:top;">${esc(k)}</td><td style="padding:6px 0;font-size:15px;line-height:1.5;font-weight:${valoresNormales ? "normal" : "bold"};color:#10211F;">${v}</td></tr>`).join("");
   return `<div style="margin:0;padding:24px 12px;background:#F6F7F4;font-family:Arial,Helvetica,sans-serif;color:#10211F;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#FFFFFF;border:1px solid #DCE3E0;border-radius:14px;overflow:hidden;">
     <tr><td style="background:#0B6E5F;padding:22px 28px;"><img src="https://aidumed.app/assets/img/logo-aidu-med-blanco.png" alt="Aid\xFA Med" height="34" style="display:block;height:34px;border:0;"></td></tr>
@@ -118,9 +118,9 @@ async function recordarRegistro(para, nombre) {
       to: para,
       subject: "Su registro en Aid\xFA Med est\xE1 a medio camino",
       html: html(`${saludo}: le falta poco para activar su asistente`, [
-        ["\xBFQu\xE9 falta?", "Terminar el formulario de registro: sus datos profesionales, consultorio, servicios y horario. Toma unos 10 minutos y lo que ya guard\xF3 sigue ah\xED."],
-        ["\xBFQu\xE9 sigue?", "Revisamos su colegiaci\xF3n en menos de 24 horas y configuramos con usted su asistente de citas por WhatsApp."]
-      ], "Si tiene alguna duda, responda a este correo o escr\xEDbanos a info@aidu.pro.", ["Continuar mi registro", "https://aidumed.app/cuenta?modo=entrar&siguiente=%2Fregistro"], "Aid\xFA Med \xB7 Su asistente de citas por WhatsApp"),
+        ["\xBFQu\xE9 falta?", "Terminar el formulario de registro: sus datos profesionales, consultorio, servicios y horario. Toma <strong>unos 10 minutos</strong> y lo que ya guard\xF3 sigue ah\xED."],
+        ["\xBFQu\xE9 sigue?", "Revisamos su colegiaci\xF3n en <strong>menos de 24 horas</strong> y configuramos con usted su asistente de citas por WhatsApp."]
+      ], "Si tiene alguna duda, responda a este correo o escr\xEDbanos a info@aidu.pro.", ["Continuar mi registro", "https://aidumed.app/cuenta?modo=entrar&siguiente=%2Fregistro"], "Aid\xFA Med \xB7 Su asistente de citas por WhatsApp", true),
       text: `${saludo}. Le falta poco para terminar su registro en Aid\xFA Med. Contin\xFAe aqu\xED: https://aidumed.app/cuenta?modo=entrar&siguiente=%2Fregistro`
     });
     console.log(`Correo enviado: recordatorio de registro \u2192 ${para} (${r.response || r.messageId})`);
