@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=4">
-<link rel="stylesheet" href="/assets/css/app.css?v=19">
+<link rel="stylesheet" href="/assets/css/app.css?v=20">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
 <script src="/assets/js/app.js?v=17" defer></script>
 <script src="/assets/vendor/qrcode-1.4.4.min.js" defer></script>
@@ -147,7 +147,7 @@
 
         <section class="caja tarjeta-ancha">
           <div class="caja-titulo"><h2>Servicios y precios</h2><a class="editar-enlace" href="/registro?paso=3">Editar</a></div>
-          <ul class="lista-servicios-perfil" id="servicios"></ul>
+          <ul class="lista-servicios-perfil lista-scroll" id="servicios"></ul>
         </section>
 
         <section class="caja">
@@ -160,8 +160,10 @@
         <section class="caja">
           <div class="caja-titulo"><h2>Vacaciones y días libres</h2><a class="editar-enlace" href="/registro?paso=4" title="Editar las vacaciones de cada año">Editar</a></div>
           <p class="ayuda">En estas fechas el asistente no agenda citas.</p>
-          <div id="vacaciones"></div>
-          <ul class="lista-fechas-perfil" id="otras-fechas"></ul>
+          <div class="lista-scroll">
+            <div id="vacaciones"></div>
+            <ul class="lista-fechas-perfil" id="otras-fechas"></ul>
+          </div>
           <button type="button" class="boton-agregar-fecha" id="abrir-fecha">+ Agregar fecha</button>
           <form class="form-fecha" id="form-fecha" hidden autocomplete="off">
             <strong>Nueva fecha sin consulta</strong>

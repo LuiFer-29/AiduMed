@@ -49,6 +49,27 @@ export async function avisarFotoPendiente(m: Medico, urlFoto: string) {
   }
 }
 
+/** Al médico que no ha terminado su registro: recordatorio con enlace para continuar. */
+export async function recordarRegistro(para: string, nombre: string | null): Promise<boolean> {
+  const saludo = nombre ? `Hola, ${nombre}` : "Hola";
+  try {
+    const r = await transporte.sendMail({
+      from: '"Aidú Med" <hola@aidu.pro>', to: para,
+      subject: "Su registro en Aidú Med está a medio camino",
+      html: html(`${saludo}: le falta poco para activar su asistente`, [
+        ["¿Qué falta?", "Terminar el formulario de registro: sus datos profesionales, consultorio, servicios y horario. Toma unos 10 minutos y lo que ya guardó sigue ahí."],
+        ["¿Qué sigue?", "Revisamos su colegiación en menos de 24 horas y configuramos con usted su asistente de citas por WhatsApp."],
+      ], "Si tiene alguna duda, responda a este correo o escríbanos a info@aidu.pro.", ["Continuar mi registro", "https://aidumed.app/cuenta?modo=entrar&siguiente=%2Fregistro"], "Aidú Med · Su asistente de citas por WhatsApp"),
+      text: `${saludo}. Le falta poco para terminar su registro en Aidú Med. Continúe aquí: https://aidumed.app/cuenta?modo=entrar&siguiente=%2Fregistro`,
+    });
+    console.log(`Correo enviado: recordatorio de registro → ${para} (${r.response || r.messageId})`);
+    return true;
+  } catch (e) {
+    console.error("Correo", e);
+    return false;
+  }
+}
+
 export function crearAvisos(prueba: boolean): Avisos {
   const prefijo = prueba ? "[Prueba] " : "";
   async function enviar(para: string | null | undefined, asunto: string, cuerpo: string, texto: string) {

@@ -48,3 +48,13 @@ insert into public.ajustes (clave, valor) values
   ('tasa_hnl', '26.5'::jsonb),
   ('tarifa_whatsapp_usd', '0.0113'::jsonb)
 on conflict (clave) do nothing;
+
+-- Recordatorios enviados a quienes no terminan su registro.
+create table if not exists public.registro_recordatorios (
+  id bigserial primary key,
+  user_id uuid not null,
+  enviado_at timestamptz not null default now()
+);
+alter table public.registro_recordatorios enable row level security;
+drop policy if exists "registro_recordatorios: admin" on public.registro_recordatorios;
+create policy "registro_recordatorios: admin" on public.registro_recordatorios for select using (public.es_admin());

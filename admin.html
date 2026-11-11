@@ -11,10 +11,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=4">
-<link rel="stylesheet" href="/assets/css/app.css?v=19">
+<link rel="stylesheet" href="/assets/css/app.css?v=20">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
 <script src="/assets/js/app.js?v=17" defer></script>
-<script src="/assets/js/admin.js?v=18" defer></script>
+<script src="/assets/js/admin.js?v=19" defer></script>
 </head>
 <body class="app">
 <header class="barra-app">
@@ -62,34 +62,37 @@
 
     </div>
     <div class="panel-vista admin-vista" id="vista-costos" hidden>
-      <div class="titulo-admin costos-titulo">
-        <h1>Costos y uso</h1>
-        <div class="costos-controles">
-          <label class="campo-linea">Mes <select id="co-mes"></select></label>
-          <div class="pestanas-mini" role="tablist" aria-label="Moneda">
-            <button type="button" role="tab" aria-selected="true" data-moneda="USD">USD</button>
-            <button type="button" role="tab" aria-selected="false" data-moneda="HNL">Lempiras</button>
+      <div class="costos-hero">
+        <div class="costos-titulo">
+          <h1>Costos y uso</h1>
+          <div class="costos-controles">
+            <label class="campo-linea">Mes <select id="co-mes"></select></label>
+            <div class="pestanas-mini" role="tablist" aria-label="Moneda">
+              <button type="button" role="tab" aria-selected="true" data-moneda="USD">USD</button>
+              <button type="button" role="tab" aria-selected="false" data-moneda="HNL">Lempiras</button>
+            </div>
+            <label class="campo-linea">Tasa L <input type="number" id="co-tasa" step="0.01" min="1" inputmode="decimal"></label>
+            <button type="button" class="boton boton-secundario boton-chico" id="co-guardar-tasa" hidden>Guardar tasa</button>
           </div>
-          <label class="campo-linea">Tasa L <input type="number" id="co-tasa" step="0.01" min="1" inputmode="decimal"></label>
-          <button type="button" class="boton boton-secundario boton-chico" id="co-guardar-tasa" hidden>Guardar tasa</button>
         </div>
+        <div class="avisos-costos" id="co-avisos"></div>
       </div>
-      <div class="avisos-costos" id="co-avisos"></div>
       <div class="tarjetas-costos" id="co-tarjetas"><p class="ayuda">Cargando…</p></div>
       <section class="caja">
         <div class="caja-titulo"><h2>Gasto e ingreso por mes</h2><span class="ayuda" id="co-leyenda"></span></div>
         <div id="co-grafica" class="grafica-costos"></div>
       </section>
-      <section class="caja">
-        <div class="caja-titulo"><h2>Por médico</h2><span class="ayuda">Costo de WhatsApp repartido según los mensajes de cada médico, más su uso de IA.</span></div>
+      <details class="caja plegable" id="co-plegable-medicos">
+        <summary><span class="plegable-titulo"><h2>Por médico</h2><span class="ayuda" id="co-resumen-medicos"></span></span><svg class="chevron" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6l6-6"/></svg></summary>
+        <p class="ayuda">Costo de WhatsApp repartido según los mensajes de cada médico, más su uso de IA.</p>
         <div class="tabla-caja"><table class="tabla tabla-costos"><thead><tr><th>Médico</th><th>Plan</th><th class="num">Citas</th><th class="num">Mensajes</th><th class="num">Costo</th><th class="num">Costo por cita</th><th class="num">Ingreso</th><th class="num">Margen</th></tr></thead><tbody id="co-medicos"></tbody></table></div>
-      </section>
-      <section class="caja">
-        <div class="caja-titulo"><h2>Gastos operativos</h2><button type="button" class="boton boton-primario boton-chico" id="co-agregar">+ Agregar gasto</button></div>
-        <p class="ayuda">Todo gasto que quiera imputar: servicios, dominio, publicidad, viáticos… Los montos van en dólares. Marque «Mensual» si se repite cada mes.</p>
+      </details>
+      <details class="caja plegable" id="co-plegable-gastos">
+        <summary><span class="plegable-titulo"><h2>Gastos operativos</h2><span class="ayuda" id="co-resumen-gastos"></span></span><svg class="chevron" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6l6-6"/></svg></summary>
+        <div class="plegable-barra"><p class="ayuda">Todo gasto que quiera imputar: servicios, dominio, publicidad, viáticos… Los montos van en dólares. Marque «Mensual» si se repite cada mes.</p><button type="button" class="boton boton-primario boton-chico" id="co-agregar">+ Agregar gasto</button></div>
         <div class="tabla-caja"><table class="tabla tabla-gastos"><thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th class="num">Monto (USD)</th><th>Mensual</th><th>Hasta</th><th></th></tr></thead><tbody id="co-gastos"></tbody></table></div>
         <p class="mensaje" id="co-msg" hidden></p>
-      </section>
+      </details>
     </div>
 
     <div class="panel-vista admin-vista" id="vista-vacaciones" hidden>
@@ -117,7 +120,7 @@
   <div class="visor-lienzo"><img id="visor-img" alt="Carné de colegiado"></div>
 </div>
 <div class="detalle-fondo" id="detalle-fondo" hidden>
-  <aside class="detalle" role="dialog" aria-modal="true" aria-labelledby="det-nombre" id="detalle"></aside>
+  <div class="detalle ficha" role="dialog" aria-modal="true" aria-labelledby="det-nombre" id="detalle"></div>
 </div>
 </body>
 </html>

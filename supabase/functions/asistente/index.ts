@@ -6,7 +6,7 @@
 //  POST /asistente/evento     → avisos (el consultorio canceló, foto nueva por aprobar; trigger; clave interna)
 //  POST /asistente/panel      → acciones del panel del médico (sesión del médico): días cerrados y "Atender"
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { avisarFotoPendiente, crearAvisos } from "./correo.ts";
+import { avisarFotoPendiente, crearAvisos, recordarRegistro } from "./correo.ts";
 import { crearAlmacen } from "./datos.ts";
 import { atender, type Cita, type Medico, type Salida } from "./flujo.ts";
 import { crearCerebro } from "./ia.ts";
@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
   if (req.method === "POST" && ruta === "simular") return simular(req);
   if (req.method === "POST" && ruta === "panel") return panel(req);
   if (req.method === "POST" && ruta === "costos") return costos(req);
+  if (req.method === "POST" && ruta === "admin") return administrar(req);
   if (req.method === "POST" && (ruta === "recordatorios" || ruta === "evento" || ruta === "meta")) {
     if (req.headers.get("x-aviso-secreto") !== Deno.env.get("AVISO_SECRETO")) return new Response("No autorizado", { status: 401 });
     return ruta === "recordatorios" ? recordatorios() : ruta === "evento" ? evento(req) : meta(req);
@@ -224,6 +225,51 @@ async function panel(req: Request): Promise<Response> {
   return json(req, { error: "Acción no válida" }, 400);
 }
 
+// ---------- Acciones del administrador sobre registros incompletos ----------
+async function esAdmin(req: Request): Promise<string | null> {
+  const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  const u = await sb.auth.getUser(token);
+  if (u.error || !u.data.user) return null;
+  const a = await sb.from("admins").select("user_id").eq("user_id", u.data.user.id).maybeSingle();
+  return a.data ? u.data.user.id : null;
+}
+
+async function administrar(req: Request): Promise<Response> {
+  if (!(await esAdmin(req))) return json(req, { error: "Solo administradores." }, 403);
+  const { accion, user_id } = await req.json().catch(() => ({}));
+  if (!/^[0-9a-f-]{36}$/i.test(String(user_id || ""))) return json(req, { error: "Cuenta no válida" }, 400);
+  const usuario = await sb.auth.admin.getUserById(user_id);
+  if (usuario.error || !usuario.data.user) return json(req, { error: "No encontramos esa cuenta." }, 404);
+  const med = await sb.from("medicos").select("estado, nombre, titulo").eq("id", user_id).maybeSingle();
+  // Solo se actúa sobre registros que no se han enviado (Registro incompleto o «Solo cuenta»).
+  if (med.data && med.data.estado !== "borrador") return json(req, { error: "Esta acción es solo para registros incompletos." }, 400);
+  const admin = await sb.from("admins").select("user_id").eq("user_id", user_id).maybeSingle();
+  if (admin.data) return json(req, { error: "No se puede aplicar a un administrador." }, 400);
+
+  if (accion === "recordar") {
+    const correo = usuario.data.user.email;
+    if (!correo) return json(req, { error: "La cuenta no tiene correo." }, 400);
+    const nombre = med.data?.nombre ? [med.data.titulo, med.data.nombre].filter(Boolean).join(" ") : null;
+    const ok = await recordarRegistro(correo, nombre);
+    if (!ok) return json(req, { error: "No se pudo enviar el correo. Intente de nuevo." }, 502);
+    const ahora = new Date().toISOString();
+    await sb.from("registro_recordatorios").insert({ user_id, enviado_at: ahora });
+    return json(req, { ok: true, enviado_at: ahora });
+  }
+  if (accion === "eliminar") {
+    // Borra los archivos (foto y carné) y la cuenta; la ficha del médico se borra en cascada.
+    for (const bucket of ["fotos", "carnes"]) {
+      const l = await sb.storage.from(bucket).list(user_id, { limit: 100 });
+      const rutas = (l.data || []).map((f) => `${user_id}/${f.name}`);
+      if (rutas.length) await sb.storage.from(bucket).remove(rutas);
+    }
+    const r = await sb.auth.admin.deleteUser(user_id);
+    if (r.error) return json(req, { error: "No se pudo eliminar: " + r.error.message }, 500);
+    return json(req, { ok: true });
+  }
+  return json(req, { error: "Acción no válida" }, 400);
+}
+
 // ---------- Costos y uso (panel de administración) ----------
 async function todas<T>(consulta: (desde: number, hasta: number) => PromiseLike<{ data: T[] | null; error: any }>): Promise<T[]> {
   const filas: T[] = [];
@@ -236,11 +282,7 @@ async function todas<T>(consulta: (desde: number, hasta: number) => PromiseLike<
 }
 
 async function costos(req: Request): Promise<Response> {
-  const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
-  const u = await sb.auth.getUser(token);
-  if (u.error || !u.data.user) return json(req, { error: "Inicie sesión de nuevo." }, 401);
-  const admin = await sb.from("admins").select("user_id").eq("user_id", u.data.user.id).maybeSingle();
-  if (!admin.data) return json(req, { error: "Solo administradores." }, 403);
+  if (!(await esAdmin(req))) return json(req, { error: "Solo administradores." }, 403);
 
   const { hasta: mesHasta, meses: nMeses } = await req.json().catch(() => ({}));
   const n = Math.min(Math.max(Number(nMeses) || 6, 1), 24);

@@ -110,6 +110,26 @@ async function avisarFotoPendiente(m, urlFoto) {
     console.error("Correo", e);
   }
 }
+async function recordarRegistro(para, nombre) {
+  const saludo = nombre ? `Hola, ${nombre}` : "Hola";
+  try {
+    const r = await transporte.sendMail({
+      from: '"Aid\xFA Med" <hola@aidu.pro>',
+      to: para,
+      subject: "Su registro en Aid\xFA Med est\xE1 a medio camino",
+      html: html(`${saludo}: le falta poco para activar su asistente`, [
+        ["\xBFQu\xE9 falta?", "Terminar el formulario de registro: sus datos profesionales, consultorio, servicios y horario. Toma unos 10 minutos y lo que ya guard\xF3 sigue ah\xED."],
+        ["\xBFQu\xE9 sigue?", "Revisamos su colegiaci\xF3n en menos de 24 horas y configuramos con usted su asistente de citas por WhatsApp."]
+      ], "Si tiene alguna duda, responda a este correo o escr\xEDbanos a info@aidu.pro.", ["Continuar mi registro", "https://aidumed.app/cuenta?modo=entrar&siguiente=%2Fregistro"], "Aid\xFA Med \xB7 Su asistente de citas por WhatsApp"),
+      text: `${saludo}. Le falta poco para terminar su registro en Aid\xFA Med. Contin\xFAe aqu\xED: https://aidumed.app/cuenta?modo=entrar&siguiente=%2Fregistro`
+    });
+    console.log(`Correo enviado: recordatorio de registro \u2192 ${para} (${r.response || r.messageId})`);
+    return true;
+  } catch (e) {
+    console.error("Correo", e);
+    return false;
+  }
+}
 function crearAvisos(prueba) {
   const prefijo = prueba ? "[Prueba] " : "";
   async function enviar2(para, asunto, cuerpo, texto2) {
@@ -1592,6 +1612,7 @@ Deno.serve(async (req) => {
   if (req.method === "POST" && ruta === "simular") return simular(req);
   if (req.method === "POST" && ruta === "panel") return panel(req);
   if (req.method === "POST" && ruta === "costos") return costos(req);
+  if (req.method === "POST" && ruta === "admin") return administrar(req);
   if (req.method === "POST" && (ruta === "recordatorios" || ruta === "evento" || ruta === "meta")) {
     if (req.headers.get("x-aviso-secreto") !== Deno.env.get("AVISO_SECRETO")) return new Response("No autorizado", { status: 401 });
     return ruta === "recordatorios" ? recordatorios() : ruta === "evento" ? evento(req) : meta(req);
@@ -1746,6 +1767,45 @@ async function panel(req) {
   }
   return json(req, { error: "Acci\xF3n no v\xE1lida" }, 400);
 }
+async function esAdmin(req) {
+  const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  const u = await sb.auth.getUser(token);
+  if (u.error || !u.data.user) return null;
+  const a = await sb.from("admins").select("user_id").eq("user_id", u.data.user.id).maybeSingle();
+  return a.data ? u.data.user.id : null;
+}
+async function administrar(req) {
+  if (!await esAdmin(req)) return json(req, { error: "Solo administradores." }, 403);
+  const { accion, user_id } = await req.json().catch(() => ({}));
+  if (!/^[0-9a-f-]{36}$/i.test(String(user_id || ""))) return json(req, { error: "Cuenta no v\xE1lida" }, 400);
+  const usuario = await sb.auth.admin.getUserById(user_id);
+  if (usuario.error || !usuario.data.user) return json(req, { error: "No encontramos esa cuenta." }, 404);
+  const med = await sb.from("medicos").select("estado, nombre, titulo").eq("id", user_id).maybeSingle();
+  if (med.data && med.data.estado !== "borrador") return json(req, { error: "Esta acci\xF3n es solo para registros incompletos." }, 400);
+  const admin = await sb.from("admins").select("user_id").eq("user_id", user_id).maybeSingle();
+  if (admin.data) return json(req, { error: "No se puede aplicar a un administrador." }, 400);
+  if (accion === "recordar") {
+    const correo = usuario.data.user.email;
+    if (!correo) return json(req, { error: "La cuenta no tiene correo." }, 400);
+    const nombre = med.data?.nombre ? [med.data.titulo, med.data.nombre].filter(Boolean).join(" ") : null;
+    const ok = await recordarRegistro(correo, nombre);
+    if (!ok) return json(req, { error: "No se pudo enviar el correo. Intente de nuevo." }, 502);
+    const ahora = (/* @__PURE__ */ new Date()).toISOString();
+    await sb.from("registro_recordatorios").insert({ user_id, enviado_at: ahora });
+    return json(req, { ok: true, enviado_at: ahora });
+  }
+  if (accion === "eliminar") {
+    for (const bucket of ["fotos", "carnes"]) {
+      const l = await sb.storage.from(bucket).list(user_id, { limit: 100 });
+      const rutas = (l.data || []).map((f) => `${user_id}/${f.name}`);
+      if (rutas.length) await sb.storage.from(bucket).remove(rutas);
+    }
+    const r = await sb.auth.admin.deleteUser(user_id);
+    if (r.error) return json(req, { error: "No se pudo eliminar: " + r.error.message }, 500);
+    return json(req, { ok: true });
+  }
+  return json(req, { error: "Acci\xF3n no v\xE1lida" }, 400);
+}
 async function todas(consulta) {
   const filas = [];
   for (let i = 0; ; i += 1e3) {
@@ -1756,11 +1816,7 @@ async function todas(consulta) {
   }
 }
 async function costos(req) {
-  const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
-  const u = await sb.auth.getUser(token);
-  if (u.error || !u.data.user) return json(req, { error: "Inicie sesi\xF3n de nuevo." }, 401);
-  const admin = await sb.from("admins").select("user_id").eq("user_id", u.data.user.id).maybeSingle();
-  if (!admin.data) return json(req, { error: "Solo administradores." }, 403);
+  if (!await esAdmin(req)) return json(req, { error: "Solo administradores." }, 403);
   const { hasta: mesHasta, meses: nMeses } = await req.json().catch(() => ({}));
   const n = Math.min(Math.max(Number(nMeses) || 6, 1), 24);
   if (!/^\d{4}-\d{2}$/.test(String(mesHasta || ""))) return json(req, { error: "Mes no v\xE1lido" }, 400);
