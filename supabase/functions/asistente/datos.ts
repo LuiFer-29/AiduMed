@@ -60,6 +60,25 @@ export function crearAlmacen(sb: SupabaseClient): Almacen & {
       falla(r);
       return (r.data || []) as Cita[];
     },
+    async historial(pacienteId) {
+      const r = await sb.from("citas").select("medico_id, inicio, estado").eq("paciente_id", pacienteId).order("inicio", { ascending: false }).limit(50);
+      falla(r);
+      return r.data || [];
+    },
+    async citasFuturasTodas(pacienteId, ahora) {
+      const r = await sb.from("citas").select("*").eq("paciente_id", pacienteId)
+        .eq("estado", "confirmada").gt("inicio", ahora.toISOString()).order("inicio").limit(10);
+      falla(r);
+      return (r.data || []) as Cita[];
+    },
+    async medicosDisponibles() {
+      const r = await sb.from("medicos").select("*").in("estado", ["activo", "aprobado"]);
+      falla(r);
+      return (r.data || []) as Medico[];
+    },
+    async guardarSolicitud(telefono, especialidad) {
+      await sb.from("solicitudes_pacientes").insert({ telefono, especialidad });
+    },
     async cita(id) {
       const r = await sb.from("citas").select("*").eq("id", id).maybeSingle();
       falla(r);

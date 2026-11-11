@@ -113,3 +113,15 @@ begin
 end $$;
 revoke all on function public.cancelar_citas_fechas(date, date) from public, anon;
 grant execute on function public.cancelar_citas_fechas(date, date) to authenticated;
+
+-- Pacientes que pidieron una especialidad que Aidú Med todavía no tiene ("Sí, avísame").
+create table if not exists public.solicitudes_pacientes (
+  id bigserial primary key,
+  telefono text not null,
+  especialidad text not null,
+  avisado_at timestamptz,
+  creado_at timestamptz not null default now()
+);
+alter table public.solicitudes_pacientes enable row level security;
+drop policy if exists "solicitudes: admin lee" on public.solicitudes_pacientes;
+create policy "solicitudes: admin lee" on public.solicitudes_pacientes for select using (public.es_admin());

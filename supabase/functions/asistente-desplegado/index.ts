@@ -217,6 +217,24 @@ function crearAlmacen(sb2) {
       falla(r);
       return r.data || [];
     },
+    async historial(pacienteId) {
+      const r = await sb2.from("citas").select("medico_id, inicio, estado").eq("paciente_id", pacienteId).order("inicio", { ascending: false }).limit(50);
+      falla(r);
+      return r.data || [];
+    },
+    async citasFuturasTodas(pacienteId, ahora) {
+      const r = await sb2.from("citas").select("*").eq("paciente_id", pacienteId).eq("estado", "confirmada").gt("inicio", ahora.toISOString()).order("inicio").limit(10);
+      falla(r);
+      return r.data || [];
+    },
+    async medicosDisponibles() {
+      const r = await sb2.from("medicos").select("*").in("estado", ["activo", "aprobado"]);
+      falla(r);
+      return r.data || [];
+    },
+    async guardarSolicitud(telefono, especialidad2) {
+      await sb2.from("solicitudes_pacientes").insert({ telefono, especialidad: especialidad2 });
+    },
     async cita(id) {
       const r = await sb2.from("citas").select("*").eq("id", id).maybeSingle();
       falla(r);
@@ -338,11 +356,67 @@ function motivoSinHorario(p, fecha, feriados, ahora) {
   return null;
 }
 
+// especialidades.ts
+var ESPECIALIDADES = [
+  { nombre: "Medicina general", plural: "m\xE9dicos generales", raices: ["medicina general", "medico general", "doctor general", "general", "chequeo", "consulta general", "medico familiar", "medicina familiar"] },
+  { nombre: "Odontolog\xEDa", plural: "dentistas", raices: ["odonto", "dentist", "dental", "muela", "diente", "ortodon", "brackets", "frenos"] },
+  { nombre: "Pediatr\xEDa", plural: "pediatras", raices: ["pediatr", "ni\xF1o", "nino", "ni\xF1a", "nina", "bebe", "beb\xE9", "infantil", "hijo", "hija"] },
+  { nombre: "Ortopedia", plural: "ortopedistas", raices: ["ortoped", "traumatolog", "hueso", "fractura", "rodilla", "columna"] },
+  { nombre: "Nefrolog\xEDa", plural: "nefr\xF3logos", raices: ["nefrolog", "ri\xF1on", "rinon", "renal"] },
+  { nombre: "Ginecolog\xEDa", plural: "ginec\xF3logos", raices: ["ginecolog", "gineco", "obstetr", "embaraz", "prenatal"] },
+  { nombre: "Dermatolog\xEDa", plural: "dermat\xF3logos", raices: ["dermatolog", "piel", "acne", "acn\xE9", "manchas"] },
+  { nombre: "Cardiolog\xEDa", plural: "cardi\xF3logos", raices: ["cardiolog", "corazon", "coraz\xF3n", "presion alta", "hipertens"] },
+  { nombre: "Oftalmolog\xEDa", plural: "oftalm\xF3logos", raices: ["oftalmolog", "ojo", "vista", "lentes", "optometr"] },
+  { nombre: "Otorrinolaringolog\xEDa", plural: "otorrinos", raices: ["otorrin", "oido", "o\xEDdo", "garganta", "nariz"] },
+  { nombre: "Psicolog\xEDa", plural: "psic\xF3logos", raices: ["psicolog", "sicolog", "terapia", "ansiedad", "depresion", "depresi\xF3n"] },
+  { nombre: "Psiquiatr\xEDa", plural: "psiquiatras", raices: ["psiquiatr", "siquiatr"] },
+  { nombre: "Nutrici\xF3n", plural: "nutricionistas", raices: ["nutri", "dieta", "bajar de peso"] },
+  { nombre: "Medicina interna", plural: "internistas", raices: ["internist", "medicina interna"] },
+  { nombre: "Endocrinolog\xEDa", plural: "endocrin\xF3logos", raices: ["endocrin", "tiroides", "diabet"] },
+  { nombre: "Gastroenterolog\xEDa", plural: "gastroenter\xF3logos", raices: ["gastro", "estomago", "est\xF3mago", "colitis", "gastritis"] },
+  { nombre: "Neurolog\xEDa", plural: "neur\xF3logos", raices: ["neurolog", "migra\xF1a", "migrana", "convulsion"] },
+  { nombre: "Urolog\xEDa", plural: "ur\xF3logos", raices: ["urolog", "prostata", "pr\xF3stata"] },
+  { nombre: "Neumolog\xEDa", plural: "neum\xF3logos", raices: ["neumolog", "pulmon", "pulm\xF3n", "asma"] },
+  { nombre: "Fisioterapia", plural: "fisioterapeutas", raices: ["fisioter", "terapia fisica", "rehabilitacion", "rehabilitaci\xF3n"] },
+  { nombre: "Cirug\xEDa general", plural: "cirujanos", raices: ["cirujan", "cirugia", "cirug\xEDa"] },
+  { nombre: "Oncolog\xEDa", plural: "onc\xF3logos", raices: ["oncolog", "cancer", "c\xE1ncer"] },
+  { nombre: "Reumatolog\xEDa", plural: "reumat\xF3logos", raices: ["reumatolog", "artritis"] },
+  { nombre: "Alergolog\xEDa", plural: "alerg\xF3logos", raices: ["alergolog", "alergia"] }
+];
+var normal = (t) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+function especialidadEnTexto(texto2) {
+  const t = ` ${normal(texto2).replace(/[^a-z0-9ñ ]/g, " ").replace(/\s+/g, " ")} `;
+  let mejor = null;
+  for (const e of ESPECIALIDADES) {
+    for (const r of [normal(e.nombre), ...e.raices.map(normal)]) {
+      if (t.includes(` ${r}`)) {
+        if (!mejor || r.length > mejor.largo) mejor = { e, largo: r.length };
+      }
+    }
+  }
+  return mejor ? mejor.e : null;
+}
+function esDeEspecialidad(m, e) {
+  const suya = m.especialidad === "Otra" ? m.especialidad_otra || "" : m.especialidad || "";
+  if (!suya) return false;
+  if (normal(suya) === normal(e.nombre)) return true;
+  const reconocida = especialidadEnTexto(suya);
+  return !!reconocida && reconocida.nombre === e.nombre;
+}
+
 // flujo.ts
 var corto = (t, n) => t.length > n ? t.slice(0, n - 1).trimEnd() + "\u2026" : t;
 var sinAcentos2 = (t) => t.normalize("NFD").replace(/[̀-ͯ]/g, "");
 var nombreMedico = (m) => [m.titulo, m.nombre].filter(Boolean).join(" ");
 var lugarMedico = (m) => [[m.numero_consultorio ? `Consultorio ${m.numero_consultorio}` : "", m.consultorio].filter(Boolean).join(" \xB7 "), m.direccion].filter(Boolean).join(", ");
+var articulo = (m) => m.titulo === "Dra." ? "la " : m.titulo === "Dr." ? "el " : "";
+var conArticuloNegrita = (m) => `${articulo(m)}*${nombreMedico(m)}*`;
+function botonMismoMedico(m) {
+  const p = (m.nombre || "").trim().split(/\s+/);
+  const apellido = p.length === 2 ? p[1] : p.length === 4 ? p[2] : "";
+  const t = apellido ? `Cita ${m.titulo ? m.titulo + " " : ""}${apellido}` : "";
+  return t && t.length <= 20 ? t : "Cita con mi m\xE9dico";
+}
 var especialidad = (m) => (m.especialidad === "Otra" ? m.especialidad_otra : m.especialidad) || "";
 var lempiras = (p) => {
   const n = Number(String(p ?? "").replace(/\D/g, ""));
@@ -393,6 +467,7 @@ var BOTONES_MENU = [
 async function atender(e, d) {
   const { almacen: almacen2 } = d;
   const conv = await almacen2.conversacion(e.telefono) || { telefono: e.telefono, medico_id: null, paso: "inicio", datos: {} };
+  const anterior = conv.ultimo_mensaje_at ? Date.parse(conv.ultimo_mensaje_at) : 0;
   conv.ultimo_mensaje_at = d.ahora.toISOString();
   let medico = conv.medico_id ? await almacen2.medicoPorId(conv.medico_id) : null;
   if (medico && !disponible(medico, d)) medico = null;
@@ -414,12 +489,20 @@ async function atender(e, d) {
     salidas = await s.buscarMedico(nombre);
   } else if (e.id) {
     salidas = await s.porBoton(e.id);
+  } else if (esRegreso(conv, anterior, d.ahora)) {
+    salidas = await s.regreso();
   } else {
     salidas = await s.porTexto(quitarInvisibles(e.texto || "").trim());
   }
   conv.medico_id = s.medico?.id ?? null;
   await almacen2.guardarConversacion(conv);
   return salidas;
+}
+var PASOS_EN_REPOSO = ["inicio", "menu", "consulta", "mis_citas", "cita", "regreso"];
+function esRegreso(conv, anterior, ahora) {
+  if (!anterior) return false;
+  const min = (ahora.getTime() - anterior) / 6e4;
+  return min >= 30 && PASOS_EN_REPOSO.includes(conv.paso) || min >= 180;
 }
 function disponible(m, d) {
   return m.estado === "activo" || d.permitirAprobados && m.estado === "aprobado";
@@ -461,13 +544,148 @@ var Sesion = class {
     this.ir("menu", {});
     return [{ tipo: "botones", texto: texto2, botones: BOTONES_MENU }];
   }
+  // ----- Regreso: ¿con el mismo médico, con otro o gestionar citas? -----
+  async regreso() {
+    const pac = await this.d.almacen.paciente(this.e.telefono);
+    const historial = pac ? await this.d.almacen.historial(pac.id) : [];
+    const ultimoId = this.conv.medico_id || historial[0]?.medico_id || null;
+    let ultimo = ultimoId ? await this.d.almacen.medicoPorId(ultimoId) : null;
+    if (ultimo && !disponible(ultimo, this.d)) ultimo = null;
+    if (!ultimo) return this.inicio(`\xA1Hola de nuevo! \u{1F44B} Soy el asistente de citas de *Aid\xFA Med*. \xBFEres paciente o m\xE9dico?`);
+    this.medico = ultimo;
+    this.ir("regreso", {});
+    const nombre = (pac?.nombre || (this.e.nombrePerfil ? limpiarNombre(this.e.nombrePerfil) : "")).split(" ")[0];
+    const proximas = pac ? await this.d.almacen.citasFuturasTodas(pac.id, this.d.ahora) : [];
+    const esp = especialidad(ultimo);
+    let contexto2;
+    if (proximas.length) {
+      const c = proximas[0], i = new Date(c.inicio);
+      const mc = c.medico_id === ultimo.id ? ultimo : await this.d.almacen.medicoPorId(c.medico_id);
+      contexto2 = `Tienes una cita con ${mc ? conArticuloNegrita(mc) : "tu m\xE9dico"} el *${fechaLarga(fechaLocal(i)).toLowerCase()}* a las *${hora12(i)}*`;
+      if (mc && mc.id !== ultimo.id) contexto2 += `
+Tu \xFAltimo m\xE9dico consultado fue ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`;
+    } else if (historial.some((h) => h.medico_id === ultimo.id)) {
+      contexto2 = `Vemos que tu \xFAltima cita m\xE9dica fue con ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`;
+    } else {
+      contexto2 = `Vemos que la \xFAltima vez nos consultaste por ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`;
+    }
+    return [{
+      tipo: "botones",
+      texto: `\xA1Hola de nuevo${nombre ? `, ${nombre}` : ""}! \u{1F44B}
+
+${contexto2}
+
+\xBFCon qu\xE9 te podemos ayudar?`,
+      botones: [
+        { id: `reg:mismo:${ultimo.id}`, titulo: botonMismoMedico(ultimo) },
+        { id: "reg:otro", titulo: "Cita con otro m\xE9dico" },
+        { id: "reg:citas", titulo: "Gestionar mis citas" }
+      ]
+    }];
+  }
+  pedirEspecialidad(prefijo = "") {
+    this.ir("buscar_especialidad", {});
+    return [{ tipo: "texto", texto: `${prefijo}\xBFQu\xE9 especialidad o m\xE9dico buscas? Escr\xEDbelo como quieras, por ejemplo: *pediatra*, *dentista*, *ginec\xF3loga* o el *nombre del doctor*.` }];
+  }
+  /** El paciente escribió una especialidad o un nombre. */
+  async buscarEspecialidad(texto2) {
+    const e = especialidadEnTexto(texto2);
+    if (!e) {
+      const porNombre = (await this.d.almacen.buscarMedicos(texto2)).filter((m) => disponible(m, this.d));
+      if (porNombre.length) return this.buscarMedico(texto2);
+      return [{ tipo: "texto", texto: "No logr\xE9 identificar la especialidad \u{1F64F} Prueba con otra palabra, por ejemplo: *pediatra*, *dentista*, *dermat\xF3logo* o el nombre del doctor." }];
+    }
+    const pac = await this.d.almacen.paciente(this.e.telefono);
+    const historial = pac ? await this.d.almacen.historial(pac.id) : [];
+    const vistos = [...new Set(historial.map((h) => h.medico_id))];
+    for (const id of vistos) {
+      const m = await this.d.almacen.medicoPorId(id);
+      if (m && disponible(m, this.d) && esDeEspecialidad(m, e)) {
+        this.medico = m;
+        this.ir("cabecera", { especialidad: e.nombre });
+        return [{
+          tipo: "botones",
+          texto: `${m.titulo === "Dra." ? "La" : m.titulo === "Dr." ? "El" : ""} *${nombreMedico(m)}* (${e.nombre}) ya te atendi\xF3 antes. \xBFAgendamos con ${m.titulo === "Dra." ? "ella" : "\xE9l"}?`,
+          botones: [{ id: `esp:si:${m.id}`, titulo: `S\xED, con ${m.titulo === "Dra." ? "ella" : "\xE9l"}` }, { id: `esp:otros:${ESPECIALIDADES.indexOf(e)}`, titulo: "Ver otros" }]
+        }];
+      }
+    }
+    return this.medicosDeEspecialidad(ESPECIALIDADES.indexOf(e));
+  }
+  async medicosDeEspecialidad(indice) {
+    const e = ESPECIALIDADES[indice];
+    if (!e) return this.pedirEspecialidad();
+    const lista = (await this.d.almacen.medicosDisponibles()).filter((m) => disponible(m, this.d) && esDeEspecialidad(m, e));
+    if (!lista.length) {
+      this.ir("sin_especialidad", { especialidad: e.nombre });
+      return [{
+        tipo: "botones",
+        texto: `Todav\xEDa no tenemos ${e.plural} en *Aid\xFA Med*, pero estamos sumando m\xE9dicos cada semana \u{1F49A}
+
+\xBFQuieres que te avisemos por aqu\xED cuando se sume uno?`,
+        botones: [{ id: `avisar:${indice}`, titulo: "S\xED, av\xEDsame" }, { id: "reg:otro", titulo: "Buscar otra" }]
+      }];
+    }
+    if (lista.length === 1) {
+      const m = lista[0];
+      this.medico = m;
+      this.ir("cabecera", { especialidad: e.nombre });
+      return [{
+        tipo: "botones",
+        texto: `En *Aid\xFA Med* tenemos ${m.titulo === "Dra." ? "a la" : m.titulo === "Dr." ? "al" : "a"} *${nombreMedico(m)}* (${e.nombre})${m.consultorio ? `, en ${m.consultorio}` : ""}. \xBFAgendamos una cita?`,
+        botones: [{ id: `esp:si:${m.id}`, titulo: "S\xED, agendar" }, { id: "reg:otro", titulo: "Buscar otra" }]
+      }];
+    }
+    this.ir("elegir_medico", {});
+    return [{
+      tipo: "lista",
+      texto: `Estos son los ${e.plural} de *Aid\xFA Med*. Elige con qui\xE9n quieres tu cita:`,
+      boton: "Ver m\xE9dicos",
+      secciones: [{
+        titulo: corto(e.nombre, 24),
+        filas: lista.slice(0, 10).map((m) => ({
+          id: `med:${m.id}`,
+          titulo: corto(nombreMedico(m), 24),
+          descripcion: corto([m.consultorio, m.direccion].filter(Boolean).join(" \xB7 "), 72)
+        }))
+      }]
+    }];
+  }
+  /** Citas próximas con todos sus médicos. */
+  async misCitasTodas() {
+    const pac = await this.d.almacen.paciente(this.e.telefono);
+    const citas = pac ? await this.d.almacen.citasFuturasTodas(pac.id, this.d.ahora) : [];
+    if (!citas.length) {
+      return [{
+        tipo: "botones",
+        texto: "No tienes citas pr\xF3ximas. \xBFQuieres agendar una?",
+        botones: [...this.medico ? [{ id: `reg:mismo:${this.medico.id}`, titulo: botonMismoMedico(this.medico) }] : [], { id: "reg:otro", titulo: "Cita con otro m\xE9dico" }]
+      }];
+    }
+    const medicos = /* @__PURE__ */ new Map();
+    for (const c of citas) if (!medicos.has(c.medico_id)) medicos.set(c.medico_id, await this.d.almacen.medicoPorId(c.medico_id));
+    this.ir("mis_citas", {});
+    return [{
+      tipo: "lista",
+      texto: citas.length === 1 ? "Esta es tu pr\xF3xima cita. T\xF3cala para cambiarla o cancelarla:" : "Estas son tus pr\xF3ximas citas. Toca una para cambiarla o cancelarla:",
+      boton: "Ver citas",
+      secciones: [{
+        titulo: "Pr\xF3ximas citas",
+        filas: citas.map((c) => {
+          const m = medicos.get(c.medico_id);
+          return {
+            id: `cita:${c.id}`,
+            titulo: corto(`${fechaCorta(fechaLocal(new Date(c.inicio)))} \xB7 ${hora12(new Date(c.inicio))}`, 24),
+            descripcion: corto([m ? nombreMedico(m) : "", c.servicio, c.nombre_paciente].filter(Boolean).join(" \xB7 "), 72)
+          };
+        })
+      }]
+    }];
+  }
   // ----- Respuestas a botones y listas -----
   async porBoton(id) {
     const [k, v, w] = id.split(":");
-    if (k === "ini" && v === "paciente") {
-      this.ir("elegir_medico", {});
-      return [{ tipo: "texto", texto: "Escribe el *nombre de tu m\xE9dico* o el *c\xF3digo* que te dio el consultorio (por ejemplo: IB24)." }];
-    }
+    if (k === "ini" && v === "paciente") return this.pedirEspecialidad();
     if (k === "ini" && v === "medico") return this.prospecto();
     if (k === "med") {
       const m = await this.d.almacen.medicoPorId(v);
@@ -482,6 +700,34 @@ var Sesion = class {
       this.medico = m;
       return this.iniciarAgenda();
     }
+    if (k === "reg") {
+      if (v === "otro") return this.pedirEspecialidad();
+      if (v === "citas") return this.misCitasTodas();
+      if (v === "mismo") {
+        const m = await this.d.almacen.medicoPorId(w);
+        if (!m || !disponible(m, this.d)) return this.pedirEspecialidad("Ese m\xE9dico ya no est\xE1 disponible en Aid\xFA Med. ");
+        this.medico = m;
+        return this.iniciarAgenda();
+      }
+    }
+    if (k === "esp") {
+      if (v === "otros") return this.medicosDeEspecialidad(Number(w));
+      if (v === "si") {
+        const m = await this.d.almacen.medicoPorId(w);
+        if (!m || !disponible(m, this.d)) return this.pedirEspecialidad("Ese m\xE9dico ya no est\xE1 disponible. ");
+        this.medico = m;
+        return this.iniciarAgenda();
+      }
+    }
+    if (k === "avisar") {
+      const e = ESPECIALIDADES[Number(v)];
+      if (e) await this.d.almacen.guardarSolicitud(this.e.telefono, e.nombre);
+      this.ir("inicio", {});
+      return [{ tipo: "texto", texto: `\xA1Listo! Te escribiremos por aqu\xED en cuanto ${e ? `tengamos ${e.plural}` : "tengamos esa especialidad"} en Aid\xFA Med. \u{1F64C}
+
+Mientras tanto, si necesitas otra especialidad, escr\xEDbela cuando quieras.` }];
+    }
+    if (k === "cita") return this.accionesCita(v);
     if (!this.medico) return this.inicio();
     switch (k) {
       case "menu":
@@ -536,7 +782,8 @@ var Sesion = class {
     const paso = this.conv.paso;
     if (!texto2) return this.medico ? this.repetir() : this.inicio();
     if (/^(menu|menú|inicio|volver|empezar)\W*$/i.test(texto2)) return this.medico ? this.menu("\xBFEn qu\xE9 te ayudo?") : this.inicio();
-    if (paso === "elegir_medico") return this.buscarMedico(texto2);
+    if (paso === "buscar_especialidad" || paso === "sin_especialidad") return this.buscarEspecialidad(texto2);
+    if (paso === "elegir_medico") return especialidadEnTexto(texto2) ? this.buscarEspecialidad(texto2) : this.buscarMedico(texto2);
     if (paso === "prospecto") return this.guardarProspecto(texto2);
     if (paso === "nombre" && this.medico) {
       const n = limpiarNombre(texto2);
@@ -561,6 +808,9 @@ var Sesion = class {
       }
     }
     if (this.medico && paso === "confirmar" && afirma) return this.crear();
+    if (this.medico && paso === "cabecera" && afirma) return this.iniciarAgenda();
+    if (paso === "cabecera" && niega) return this.medicosDeEspecialidad(ESPECIALIDADES.findIndex((x) => x.nombre === this.datos.especialidad));
+    if (paso === "cabecera" && especialidadEnTexto(texto2)) return this.buscarEspecialidad(texto2);
     if (this.medico && paso === "cancelar" && afirma) return this.cancelar();
     if (this.medico && paso === "cancelar" && niega) return this.menu("Perfecto, tu cita sigue en pie. \xBFTe ayudo con algo m\xE1s?");
     const ip = await this.interpretar(texto2);
@@ -876,12 +1126,14 @@ Te enviar\xE9 un recordatorio el d\xEDa anterior por la tarde. Si necesitas camb
   }
   async accionesCita(id) {
     const c = await this.citaPropia(id);
-    if (!c) return this.menu("Esa cita ya no est\xE1 disponible. \xBFEn qu\xE9 te ayudo?");
+    if (!c) return this.medico ? this.menu("Esa cita ya no est\xE1 disponible. \xBFEn qu\xE9 te ayudo?") : this.inicio();
+    if (!this.medico || this.medico.id !== c.medico_id) this.medico = await this.d.almacen.medicoPorId(c.medico_id);
+    if (!this.medico) return this.inicio();
     this.ir("cita", { citaId: c.id });
     const i = new Date(c.inicio);
     return [{
       tipo: "botones",
-      texto: `Tu cita:
+      texto: `Tu cita con ${conArticuloNegrita(this.medico)}:
 
 \u{1F4C5} ${fechaLarga(fechaLocal(i))}, ${hora12(i)}
 \u{1FA7A} ${c.servicio}${c.nombre_paciente ? `
