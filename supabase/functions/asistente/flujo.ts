@@ -84,13 +84,6 @@ const articulo = (m: Medico) => (m.titulo === "Dra." ? "la " : m.titulo === "Dr.
 const conArticulo = (m: Medico) => articulo(m) + nombreMedico(m);
 /** "el *Dr. Luis Espinoza*" (artículo fuera de las negritas) */
 const conArticuloNegrita = (m: Medico) => `${articulo(m)}*${nombreMedico(m)}*`;
-/** Botón "Cita Dr. Espinoza": solo si el apellido es claro y cabe en 20 caracteres. */
-function botonMismoMedico(m: Medico): string {
-  const p = (m.nombre || "").trim().split(/\s+/);
-  const apellido = p.length === 2 ? p[1] : p.length === 4 ? p[2] : "";
-  const t = apellido ? `Cita ${m.titulo ? m.titulo + " " : ""}${apellido}` : "";
-  return t && t.length <= 20 ? t : "Cita con mi médico";
-}
 const especialidad = (m: Medico) => (m.especialidad === "Otra" ? m.especialidad_otra : m.especialidad) || "";
 const lempiras = (p?: string | number | null) => {
   const n = Number(String(p ?? "").replace(/\D/g, ""));
@@ -250,21 +243,23 @@ class Sesion {
     const proximas = pac ? await this.d.almacen.citasFuturasTodas(pac.id, this.d.ahora) : [];
     const esp = especialidad(ultimo);
     let contexto: string;
+    const tuvoCita = historial.some((h) => h.medico_id === ultimo!.id);
+    const ultimoTexto = tuvoCita
+      ? `tu última cita médica fue con ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`
+      : `la última vez nos consultaste por ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`;
     if (proximas.length) {
       const c = proximas[0], i = new Date(c.inicio);
       const mc = c.medico_id === ultimo.id ? ultimo : await this.d.almacen.medicoPorId(c.medico_id);
-      contexto = `Tienes una cita con ${mc ? conArticuloNegrita(mc) : "tu médico"} el *${fechaLarga(fechaLocal(i)).toLowerCase()}* a las *${hora12(i)}*`;
-      if (mc && mc.id !== ultimo.id) contexto += `\nTu último médico consultado fue ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`;
-    } else if (historial.some((h) => h.medico_id === ultimo!.id)) {
-      contexto = `Vemos que tu última cita médica fue con ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`;
+      contexto = `Observamos que tienes una cita con ${mc ? conArticuloNegrita(mc) : "tu médico"} el *${fechaLarga(fechaLocal(i)).toLowerCase()}* a las *${hora12(i)}* 📅`;
+      if (!mc || mc.id !== ultimo.id) contexto += `\n\nTambién vemos que ${ultimoTexto}`;
     } else {
-      contexto = `Vemos que la última vez nos consultaste por ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`;
+      contexto = `Vemos que ${ultimoTexto}`;
     }
     return [{
       tipo: "botones",
       texto: `¡Hola de nuevo${nombre ? `, ${nombre}` : ""}! 👋\n\n${contexto}\n\n¿Con qué te podemos ayudar?`,
       botones: [
-        { id: `reg:mismo:${ultimo.id}`, titulo: botonMismoMedico(ultimo) },
+        { id: `reg:mismo:${ultimo.id}`, titulo: "Cita último médico" },
         { id: "reg:otro", titulo: "Cita con otro médico" },
         { id: "reg:citas", titulo: "Gestionar mis citas" },
       ],
@@ -343,7 +338,7 @@ class Sesion {
     if (!citas.length) {
       return [{
         tipo: "botones", texto: "No tienes citas próximas. ¿Quieres agendar una?",
-        botones: [...(this.medico ? [{ id: `reg:mismo:${this.medico.id}`, titulo: botonMismoMedico(this.medico) }] : []), { id: "reg:otro", titulo: "Cita con otro médico" }],
+        botones: [...(this.medico ? [{ id: `reg:mismo:${this.medico.id}`, titulo: "Cita último médico" }] : []), { id: "reg:otro", titulo: "Cita con otro médico" }],
       }];
     }
     const medicos = new Map<string, Medico | null>();

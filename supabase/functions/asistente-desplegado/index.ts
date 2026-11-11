@@ -411,12 +411,6 @@ var nombreMedico = (m) => [m.titulo, m.nombre].filter(Boolean).join(" ");
 var lugarMedico = (m) => [[m.numero_consultorio ? `Consultorio ${m.numero_consultorio}` : "", m.consultorio].filter(Boolean).join(" \xB7 "), m.direccion].filter(Boolean).join(", ");
 var articulo = (m) => m.titulo === "Dra." ? "la " : m.titulo === "Dr." ? "el " : "";
 var conArticuloNegrita = (m) => `${articulo(m)}*${nombreMedico(m)}*`;
-function botonMismoMedico(m) {
-  const p = (m.nombre || "").trim().split(/\s+/);
-  const apellido = p.length === 2 ? p[1] : p.length === 4 ? p[2] : "";
-  const t = apellido ? `Cita ${m.titulo ? m.titulo + " " : ""}${apellido}` : "";
-  return t && t.length <= 20 ? t : "Cita con mi m\xE9dico";
-}
 var especialidad = (m) => (m.especialidad === "Otra" ? m.especialidad_otra : m.especialidad) || "";
 var lempiras = (p) => {
   const n = Number(String(p ?? "").replace(/\D/g, ""));
@@ -558,16 +552,17 @@ var Sesion = class {
     const proximas = pac ? await this.d.almacen.citasFuturasTodas(pac.id, this.d.ahora) : [];
     const esp = especialidad(ultimo);
     let contexto2;
+    const tuvoCita = historial.some((h) => h.medico_id === ultimo.id);
+    const ultimoTexto = tuvoCita ? `tu \xFAltima cita m\xE9dica fue con ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.` : `la \xFAltima vez nos consultaste por ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`;
     if (proximas.length) {
       const c = proximas[0], i = new Date(c.inicio);
       const mc = c.medico_id === ultimo.id ? ultimo : await this.d.almacen.medicoPorId(c.medico_id);
-      contexto2 = `Tienes una cita con ${mc ? conArticuloNegrita(mc) : "tu m\xE9dico"} el *${fechaLarga(fechaLocal(i)).toLowerCase()}* a las *${hora12(i)}*`;
-      if (mc && mc.id !== ultimo.id) contexto2 += `
-Tu \xFAltimo m\xE9dico consultado fue ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`;
-    } else if (historial.some((h) => h.medico_id === ultimo.id)) {
-      contexto2 = `Vemos que tu \xFAltima cita m\xE9dica fue con ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`;
+      contexto2 = `Observamos que tienes una cita con ${mc ? conArticuloNegrita(mc) : "tu m\xE9dico"} el *${fechaLarga(fechaLocal(i)).toLowerCase()}* a las *${hora12(i)}* \u{1F4C5}`;
+      if (!mc || mc.id !== ultimo.id) contexto2 += `
+
+Tambi\xE9n vemos que ${ultimoTexto}`;
     } else {
-      contexto2 = `Vemos que la \xFAltima vez nos consultaste por ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`;
+      contexto2 = `Vemos que ${ultimoTexto}`;
     }
     return [{
       tipo: "botones",
@@ -577,7 +572,7 @@ ${contexto2}
 
 \xBFCon qu\xE9 te podemos ayudar?`,
       botones: [
-        { id: `reg:mismo:${ultimo.id}`, titulo: botonMismoMedico(ultimo) },
+        { id: `reg:mismo:${ultimo.id}`, titulo: "Cita \xFAltimo m\xE9dico" },
         { id: "reg:otro", titulo: "Cita con otro m\xE9dico" },
         { id: "reg:citas", titulo: "Gestionar mis citas" }
       ]
@@ -659,7 +654,7 @@ ${contexto2}
       return [{
         tipo: "botones",
         texto: "No tienes citas pr\xF3ximas. \xBFQuieres agendar una?",
-        botones: [...this.medico ? [{ id: `reg:mismo:${this.medico.id}`, titulo: botonMismoMedico(this.medico) }] : [], { id: "reg:otro", titulo: "Cita con otro m\xE9dico" }]
+        botones: [...this.medico ? [{ id: `reg:mismo:${this.medico.id}`, titulo: "Cita \xFAltimo m\xE9dico" }] : [], { id: "reg:otro", titulo: "Cita con otro m\xE9dico" }]
       }];
     }
     const medicos = /* @__PURE__ */ new Map();
