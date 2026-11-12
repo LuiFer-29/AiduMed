@@ -178,6 +178,7 @@ export async function atender(e: Entrada, d: Dependencias): Promise<Salida[]> {
   } else {
     salidas = await s.porTexto(quitarInvisibles(e.texto || "").trim());
   }
+  if (s.sinGuardar) return salidas;
   conv.medico_id = s.medico?.id ?? null;
   await almacen.guardarConversacion(conv);
   return salidas;
@@ -198,6 +199,8 @@ function disponible(m: Medico, d: Dependencias) {
 
 // ---------- Conversación ----------
 class Sesion {
+  /** Acciones que no deben tocar el estado guardado de la conversación (p. ej. "Confirmo"). */
+  sinGuardar = false;
   constructor(public e: Entrada, public d: Dependencias, public conv: Conversacion, public medico: Medico | null) {}
 
   get datos() { return this.conv.datos; }
@@ -810,8 +813,10 @@ class Sesion {
     if (!c) return this.misCitas();
     const i = this.servicios().findIndex((s) => s.nombre === c.servicio);
     this.conv.datos = { citaId: c.id, servicio: i >= 0 ? i : undefined };
-    if (i < 0) return this.iniciarAgenda(undefined, true);
-    return this.mostrarDias();
+    const ini = new Date(c.inicio);
+    const aviso: Salida = { tipo: "texto", texto: `Vamos a reagendar la cita${c.nombre_paciente ? ` de *${c.nombre_paciente}*` : ""} del *${fechaLarga(fechaLocal(ini)).toLowerCase()}, ${hora12(ini)}* 📅` };
+    if (i < 0) return [aviso, ...(await this.iniciarAgenda(undefined, true))];
+    return [aviso, ...(await this.mostrarDias())];
   }
 
   async preguntarCancelar(): Promise<Salida[]> {
@@ -841,12 +846,16 @@ class Sesion {
     const m = await this.d.almacen.medicoPorId(c.medico_id);
     if (!m) return this.inicio();
     this.medico = m;
-    if (c.estado !== "confirmada" || new Date(c.inicio) < this.d.ahora) return this.menu("Esa cita ya no está activa. ¿En qué le puedo ayudar?");
-    this.conv.datos = { citaId: c.id };
-    if (accion === "cambiar") return this.reagendar();
-    if (accion === "cancelar") return this.preguntarCancelar();
+    if (c.estado !== "confirmada" || new Date(c.inicio) < this.d.ahora) {
+      if (accion === "si") { this.sinGuardar = true; return [{ tipo: "texto", texto: "Esa cita ya no está activa." }]; }
+      return this.menu("Esa cita ya no está activa. ¿En qué le puedo ayudar?");
+    }
+    if (accion === "cambiar") { this.conv.datos = { citaId: c.id }; return this.reagendar(); }
+    if (accion === "cancelar") { this.conv.datos = { citaId: c.id }; return this.preguntarCancelar(); }
     await this.d.almacen.confirmarAsistencia(c.id);
-    this.ir("menu", {});
+    // Confirmar no cambia la conversación: si el paciente está a mitad de otra gestión
+    // (por ejemplo, reagendando otra cita), la deja intacta.
+    this.sinGuardar = true;
     const i = new Date(c.inicio);
     const lugar = [m.consultorio, m.direccion].filter(Boolean).join(", ");
     return [{

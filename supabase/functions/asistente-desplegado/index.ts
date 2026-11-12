@@ -515,6 +515,7 @@ async function atender(e, d) {
   } else {
     salidas = await s.porTexto(quitarInvisibles(e.texto || "").trim());
   }
+  if (s.sinGuardar) return salidas;
   conv.medico_id = s.medico?.id ?? null;
   await almacen2.guardarConversacion(conv);
   return salidas;
@@ -535,6 +536,8 @@ var Sesion = class {
     this.conv = conv;
     this.medico = medico;
   }
+  /** Acciones que no deben tocar el estado guardado de la conversación (p. ej. "Confirmo"). */
+  sinGuardar = false;
   get datos() {
     return this.conv.datos;
   }
@@ -1171,8 +1174,10 @@ Le enviar\xE9 un recordatorio el d\xEDa anterior por la tarde. Si necesita cambi
     if (!c) return this.misCitas();
     const i = this.servicios().findIndex((s) => s.nombre === c.servicio);
     this.conv.datos = { citaId: c.id, servicio: i >= 0 ? i : void 0 };
-    if (i < 0) return this.iniciarAgenda(void 0, true);
-    return this.mostrarDias();
+    const ini = new Date(c.inicio);
+    const aviso = { tipo: "texto", texto: `Vamos a reagendar la cita${c.nombre_paciente ? ` de *${c.nombre_paciente}*` : ""} del *${fechaLarga(fechaLocal(ini)).toLowerCase()}, ${hora12(ini)}* \u{1F4C5}` };
+    if (i < 0) return [aviso, ...await this.iniciarAgenda(void 0, true)];
+    return [aviso, ...await this.mostrarDias()];
   }
   async preguntarCancelar() {
     const c = this.datos.citaId ? await this.citaPropia(this.datos.citaId) : null;
@@ -1200,12 +1205,23 @@ Le enviar\xE9 un recordatorio el d\xEDa anterior por la tarde. Si necesita cambi
     const m = await this.d.almacen.medicoPorId(c.medico_id);
     if (!m) return this.inicio();
     this.medico = m;
-    if (c.estado !== "confirmada" || new Date(c.inicio) < this.d.ahora) return this.menu("Esa cita ya no est\xE1 activa. \xBFEn qu\xE9 le puedo ayudar?");
-    this.conv.datos = { citaId: c.id };
-    if (accion === "cambiar") return this.reagendar();
-    if (accion === "cancelar") return this.preguntarCancelar();
+    if (c.estado !== "confirmada" || new Date(c.inicio) < this.d.ahora) {
+      if (accion === "si") {
+        this.sinGuardar = true;
+        return [{ tipo: "texto", texto: "Esa cita ya no est\xE1 activa." }];
+      }
+      return this.menu("Esa cita ya no est\xE1 activa. \xBFEn qu\xE9 le puedo ayudar?");
+    }
+    if (accion === "cambiar") {
+      this.conv.datos = { citaId: c.id };
+      return this.reagendar();
+    }
+    if (accion === "cancelar") {
+      this.conv.datos = { citaId: c.id };
+      return this.preguntarCancelar();
+    }
     await this.d.almacen.confirmarAsistencia(c.id);
-    this.ir("menu", {});
+    this.sinGuardar = true;
     const i = new Date(c.inicio);
     const lugar = [m.consultorio, m.direccion].filter(Boolean).join(", ");
     return [{
