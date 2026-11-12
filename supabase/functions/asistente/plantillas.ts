@@ -118,5 +118,5 @@ export function turnoListoTexto(c: Cita, m: Medico): string {
   const listo = m.titulo === "Dra." ? "lista" : "listo";
   const nombre = primerNombre(c.nombre_paciente);
   const a = m.numero_consultorio ? `al *Consultorio ${m.numero_consultorio}*` : m.consultorio ? `a *${m.consultorio}*` : "al consultorio";
-  return `Hola${nombre ? `, ${nombre}` : ""} 👋\n\n${quien.charAt(0).toUpperCase() + quien.slice(1)} está ${listo} para atenderle. Por favor, diríjase ${a}.`;
+  return `Hola${nombre ? `, ${nombre}` : ""}. ${quien.charAt(0).toUpperCase() + quien.slice(1)} está ${listo} para atenderle.\n\nPor favor, diríjase ${a}.\n\n¡Le esperamos!`;
 }

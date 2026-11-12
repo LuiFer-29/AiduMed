@@ -1489,9 +1489,11 @@ function turnoListoTexto(c, m) {
   const listo = m.titulo === "Dra." ? "lista" : "listo";
   const nombre = primerNombre(c.nombre_paciente);
   const a = m.numero_consultorio ? `al *Consultorio ${m.numero_consultorio}*` : m.consultorio ? `a *${m.consultorio}*` : "al consultorio";
-  return `Hola${nombre ? `, ${nombre}` : ""} \u{1F44B}
+  return `Hola${nombre ? `, ${nombre}` : ""}. ${quien.charAt(0).toUpperCase() + quien.slice(1)} est\xE1 ${listo} para atenderle.
 
-${quien.charAt(0).toUpperCase() + quien.slice(1)} est\xE1 ${listo} para atenderle. Por favor, dir\xEDjase ${a}.`;
+Por favor, dir\xEDjase ${a}.
+
+\xA1Le esperamos!`;
 }
 
 // whatsapp.ts
@@ -1993,7 +1995,7 @@ var PLANTILLAS = [
     components: [
       {
         type: "BODY",
-        text: "Hola, {{1}}. {{2}} ya puede atenderle.\n\nPor favor, dir\xEDjase a: *{{3}}*. \xA1Le esperamos!",
+        text: "Hola, {{1}}. {{2}} ya puede atenderle.\n\nPor favor, dir\xEDjase a: *{{3}}*.\n\n\xA1Le esperamos!",
         example: { body_text: [["Mar\xEDa", "El Dr. Luis Espinoza", "Consultorio 204"]] }
       },
       { type: "FOOTER", text: "Aid\xFA Med \xB7 Asistente de citas" }

@@ -453,7 +453,7 @@ const PLANTILLAS = [
     components: [
       {
         type: "BODY",
-        text: "Hola, {{1}}. {{2}} ya puede atenderle.\n\nPor favor, diríjase a: *{{3}}*. ¡Le esperamos!",
+        text: "Hola, {{1}}. {{2}} ya puede atenderle.\n\nPor favor, diríjase a: *{{3}}*.\n\n¡Le esperamos!",
         example: { body_text: [["María", "El Dr. Luis Espinoza", "Consultorio 204"]] },
       },
       { type: "FOOTER", text: "Aidú Med · Asistente de citas" },
