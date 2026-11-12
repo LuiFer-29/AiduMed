@@ -95,7 +95,7 @@ const limpiarNombre = (t: string) =>
 
 /** "Hola, quiero agendar una cita con el Dr. Luis Espinoza" → "Luis Espinoza" (mensaje del enlace del médico). */
 export function medicoEnTexto(texto: string): string | null {
-  const m = texto.match(/cita con (?:el |la )?(?:dra?|doctora?)\.?\s+([\p{L}][\p{L} .'-]{2,60}?)[\s.!¡]*$/iu);
+  const m = texto.match(/cita con (?:el |la )?(?:dra?|doctora?)\.?\s+([\p{L}][\p{L}\d .'-]{1,60}?)[\s.!¡?]*$/iu);
   return m ? m[1].trim() : null;
 }
 
@@ -168,7 +168,8 @@ export async function atender(e: Entrada, d: Dependencias): Promise<Salida[]> {
   } else if (exactos.length === 1 || porNombre.length === 1) {
     s.medico = exactos.length === 1 ? exactos[0] : porNombre[0];
     salidas = await s.saludo();
-  } else if (porNombre.length > 1) {
+  } else if (porNombre.length > 1 || (nombre && !porNombre.length)) {
+    // Pidió un médico por nombre: varios coinciden (se elige) o ninguno (se avisa), sin seguir con el anterior.
     salidas = await s.buscarMedico(nombre!);
   } else if (e.id) {
     salidas = await s.porBoton(e.id);
@@ -459,6 +460,7 @@ class Sesion {
     const paso = this.conv.paso;
     if (!texto) return this.medico ? this.repetir() : this.inicio();
 
+    if (/\b(otro (medico|médico|doctor|doctora)|cambiar de (medico|médico|doctor|doctora))\b/i.test(texto)) return this.pedirEspecialidad();
     if (/^(menu|menú|inicio|volver|empezar)\W*$/i.test(texto)) return this.medico ? this.menu("¿En qué le puedo ayudar?") : this.inicio();
     if (paso === "buscar_especialidad" || paso === "sin_especialidad") return this.buscarEspecialidad(texto);
     if (paso === "elegir_medico") return especialidadEnTexto(texto) ? this.buscarEspecialidad(texto) : this.buscarMedico(texto);
@@ -884,10 +886,14 @@ class Sesion {
   async buscarMedico(texto: string): Promise<Salida[]> {
     const lista = (await this.d.almacen.buscarMedicos(texto)).filter((m) => disponible(m, this.d));
     if (!lista.length) {
+      this.ir("buscar_especialidad", {});
       return [{
         tipo: "botones",
-        texto: "No encontré a ese médico en Aidú Med. Revise el nombre o pida al consultorio su *código* (por ejemplo: IB24) y escríbalo aquí.",
-        botones: [{ id: "ini:medico", titulo: "Soy médico" }],
+        texto: `No encontré a ese médico en *Aidú Med* 🙏 Revise el nombre o escriba la *especialidad* que busca (por ejemplo: *pediatra* o *dentista*).${this.medico ? `\n\nSi prefiere, puede seguir con ${conArticuloNegrita(this.medico)}.` : ""}`,
+        botones: [
+          ...(this.medico ? [{ id: `reg:mismo:${this.medico.id}`, titulo: "Seguir con el mismo" }] : []),
+          { id: "ini:medico", titulo: "Soy médico" },
+        ],
       }];
     }
     if (lista.length === 1) {

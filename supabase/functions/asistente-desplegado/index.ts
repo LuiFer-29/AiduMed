@@ -445,7 +445,7 @@ var lempiras = (p) => {
 };
 var limpiarNombre = (t) => t.replace(/[^\p{L}\s'.-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 60).split(" ").map((p) => p ? p[0].toUpperCase() + p.slice(1).toLowerCase() : p).join(" ");
 function medicoEnTexto(texto2) {
-  const m = texto2.match(/cita con (?:el |la )?(?:dra?|doctora?)\.?\s+([\p{L}][\p{L} .'-]{2,60}?)[\s.!¡]*$/iu);
+  const m = texto2.match(/cita con (?:el |la )?(?:dra?|doctora?)\.?\s+([\p{L}][\p{L}\d .'-]{1,60}?)[\s.!¡?]*$/iu);
   return m ? m[1].trim() : null;
 }
 var INVISIBLES = ["\u200B", "\u200C", "\u200D", "\u2060"];
@@ -506,7 +506,7 @@ async function atender(e, d) {
   } else if (exactos.length === 1 || porNombre.length === 1) {
     s.medico = exactos.length === 1 ? exactos[0] : porNombre[0];
     salidas = await s.saludo();
-  } else if (porNombre.length > 1) {
+  } else if (porNombre.length > 1 || nombre && !porNombre.length) {
     salidas = await s.buscarMedico(nombre);
   } else if (e.id) {
     salidas = await s.porBoton(e.id);
@@ -803,6 +803,7 @@ Mientras tanto, si necesita otra especialidad, escr\xEDbala cuando guste.` }];
   async porTexto(texto2) {
     const paso = this.conv.paso;
     if (!texto2) return this.medico ? this.repetir() : this.inicio();
+    if (/\b(otro (medico|médico|doctor|doctora)|cambiar de (medico|médico|doctor|doctora))\b/i.test(texto2)) return this.pedirEspecialidad();
     if (/^(menu|menú|inicio|volver|empezar)\W*$/i.test(texto2)) return this.medico ? this.menu("\xBFEn qu\xE9 le puedo ayudar?") : this.inicio();
     if (paso === "buscar_especialidad" || paso === "sin_especialidad") return this.buscarEspecialidad(texto2);
     if (paso === "elegir_medico") return especialidadEnTexto(texto2) ? this.buscarEspecialidad(texto2) : this.buscarMedico(texto2);
@@ -1243,10 +1244,16 @@ ${lineas.join("\n")}` : "Por ahora no tengo otro contacto del consultorio.", bot
   async buscarMedico(texto2) {
     const lista = (await this.d.almacen.buscarMedicos(texto2)).filter((m) => disponible(m, this.d));
     if (!lista.length) {
+      this.ir("buscar_especialidad", {});
       return [{
         tipo: "botones",
-        texto: "No encontr\xE9 a ese m\xE9dico en Aid\xFA Med. Revise el nombre o pida al consultorio su *c\xF3digo* (por ejemplo: IB24) y escr\xEDbalo aqu\xED.",
-        botones: [{ id: "ini:medico", titulo: "Soy m\xE9dico" }]
+        texto: `No encontr\xE9 a ese m\xE9dico en *Aid\xFA Med* \u{1F64F} Revise el nombre o escriba la *especialidad* que busca (por ejemplo: *pediatra* o *dentista*).${this.medico ? `
+
+Si prefiere, puede seguir con ${conArticuloNegrita(this.medico)}.` : ""}`,
+        botones: [
+          ...this.medico ? [{ id: `reg:mismo:${this.medico.id}`, titulo: "Seguir con el mismo" }] : [],
+          { id: "ini:medico", titulo: "Soy m\xE9dico" }
+        ]
       }];
     }
     if (lista.length === 1) {
