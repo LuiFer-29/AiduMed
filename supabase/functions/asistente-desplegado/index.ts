@@ -543,7 +543,7 @@ var Sesion = class {
     if (datos) this.conv.datos = datos;
   }
   // ----- Inicio, sin médico elegido -----
-  inicio(texto2 = "\xA1Hola! \u{1F44B} Soy el asistente de citas de *Aid\xFA Med*. \xBFEres paciente o m\xE9dico?") {
+  inicio(texto2 = "\xA1Hola! \u{1F44B} Soy el asistente de citas de *Aid\xFA Med*. \xBFEs usted paciente o m\xE9dico?") {
     this.ir("inicio", {});
     return [{ tipo: "botones", texto: texto2, botones: [{ id: "ini:paciente", titulo: "Soy paciente" }, { id: "ini:medico", titulo: "Soy m\xE9dico" }] }];
   }
@@ -555,13 +555,13 @@ var Sesion = class {
     const esp = especialidad(m);
     return [{
       tipo: "botones",
-      texto: `\xA1Hola${nombre ? `, ${nombre}` : ""}! \u{1F44B} Soy el asistente de citas de *${nombreMedico(m)}*${esp ? ` (${esp})` : ""}.
+      texto: `\xA1Hola${nombre ? `, ${nombre}` : ""}! \u{1F44B} Soy el asistente de citas ${m.titulo === "Dra." ? "de la" : m.titulo === "Dr." ? "del" : "de"} *${nombreMedico(m)}*${esp ? ` (${esp})` : ""}.
 
-\xBFEn qu\xE9 te ayudo?`,
+\xBFEn qu\xE9 le puedo ayudar?`,
       botones: BOTONES_MENU
     }];
   }
-  menu(texto2 = "\xBFEn qu\xE9 m\xE1s te ayudo?") {
+  menu(texto2 = "\xBFEn qu\xE9 m\xE1s le puedo ayudar?") {
     this.ir("menu", {});
     return [{ tipo: "botones", texto: texto2, botones: BOTONES_MENU }];
   }
@@ -572,7 +572,7 @@ var Sesion = class {
     const ultimoId = this.conv.medico_id || historial[0]?.medico_id || null;
     let ultimo = ultimoId ? await this.d.almacen.medicoPorId(ultimoId) : null;
     if (ultimo && !disponible(ultimo, this.d)) ultimo = null;
-    if (!ultimo) return this.inicio(`\xA1Hola de nuevo! \u{1F44B} Soy el asistente de citas de *Aid\xFA Med*. \xBFEres paciente o m\xE9dico?`);
+    if (!ultimo) return this.inicio(`\xA1Hola de nuevo! \u{1F44B} Soy el asistente de citas de *Aid\xFA Med*. \xBFEs usted paciente o m\xE9dico?`);
     this.medico = ultimo;
     this.ir("regreso", {});
     const nombre = (pac?.nombre || (this.e.nombrePerfil ? limpiarNombre(this.e.nombrePerfil) : "")).split(" ")[0];
@@ -580,11 +580,11 @@ var Sesion = class {
     const esp = especialidad(ultimo);
     let contexto2;
     const tuvoCita = historial.some((h) => h.medico_id === ultimo.id);
-    const ultimoTexto = tuvoCita ? `tu \xFAltima cita m\xE9dica fue con ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.` : `la \xFAltima vez nos consultaste por ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`;
+    const ultimoTexto = tuvoCita ? `su \xFAltima cita m\xE9dica fue con ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.` : `la \xFAltima vez nos consult\xF3 por ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`;
     if (proximas.length) {
       const c = proximas[0], i = new Date(c.inicio);
       const mc = c.medico_id === ultimo.id ? ultimo : await this.d.almacen.medicoPorId(c.medico_id);
-      contexto2 = `Observamos que tienes una cita con ${mc ? conArticuloNegrita(mc) : "tu m\xE9dico"} el *${fechaLarga(fechaLocal(i)).toLowerCase()}* a las *${hora12(i)}* \u{1F4C5}`;
+      contexto2 = `Observamos que tiene una cita con ${mc ? conArticuloNegrita(mc) : "su m\xE9dico"} el *${fechaLarga(fechaLocal(i)).toLowerCase()}* a las *${hora12(i)}* \u{1F4C5}`;
       if (!mc || mc.id !== ultimo.id) contexto2 += `
 
 Tambi\xE9n vemos que ${ultimoTexto}`;
@@ -597,7 +597,7 @@ Tambi\xE9n vemos que ${ultimoTexto}`;
 
 ${contexto2}
 
-\xBFCon qu\xE9 te podemos ayudar?`,
+\xBFCon qu\xE9 le podemos ayudar?`,
       botones: [
         { id: `reg:mismo:${ultimo.id}`, titulo: "Cita \xFAltimo m\xE9dico" },
         { id: "reg:otro", titulo: "Cita con otro m\xE9dico" },
@@ -607,7 +607,7 @@ ${contexto2}
   }
   pedirEspecialidad(prefijo = "") {
     this.ir("buscar_especialidad", {});
-    return [{ tipo: "texto", texto: `${prefijo}\xBFQu\xE9 especialidad o m\xE9dico buscas? Escr\xEDbelo como quieras, por ejemplo: *pediatra*, *dentista*, *ginec\xF3loga* o el *nombre del doctor*.` }];
+    return [{ tipo: "texto", texto: `${prefijo}\xBFQu\xE9 especialidad o m\xE9dico busca? Escr\xEDbalo como guste, por ejemplo: *pediatra*, *dentista*, *ginec\xF3loga* o el *nombre del doctor*.` }];
   }
   /** El paciente escribió una especialidad o un nombre. */
   async buscarEspecialidad(texto2) {
@@ -615,7 +615,7 @@ ${contexto2}
     if (!e) {
       const porNombre = (await this.d.almacen.buscarMedicos(texto2)).filter((m) => disponible(m, this.d));
       if (porNombre.length) return this.buscarMedico(texto2);
-      return [{ tipo: "texto", texto: "No logr\xE9 identificar la especialidad \u{1F64F} Prueba con otra palabra, por ejemplo: *pediatra*, *dentista*, *dermat\xF3logo* o el nombre del doctor." }];
+      return [{ tipo: "texto", texto: "No logr\xE9 identificar la especialidad \u{1F64F} Pruebe con otra palabra, por ejemplo: *pediatra*, *dentista*, *dermat\xF3logo* o el nombre del doctor." }];
     }
     const pac = await this.d.almacen.paciente(this.e.telefono);
     const historial = pac ? await this.d.almacen.historial(pac.id) : [];
@@ -627,7 +627,7 @@ ${contexto2}
         this.ir("cabecera", { especialidad: e.nombre });
         return [{
           tipo: "botones",
-          texto: `${m.titulo === "Dra." ? "La" : m.titulo === "Dr." ? "El" : ""} *${nombreMedico(m)}* (${e.nombre}) ya te atendi\xF3 antes. \xBFAgendamos con ${m.titulo === "Dra." ? "ella" : "\xE9l"}?`,
+          texto: `${m.titulo === "Dra." ? "La" : m.titulo === "Dr." ? "El" : ""} *${nombreMedico(m)}* (${e.nombre}) ya le atendi\xF3 antes. \xBFAgendamos con ${m.titulo === "Dra." ? "ella" : "\xE9l"}?`,
           botones: [{ id: `esp:si:${m.id}`, titulo: `S\xED, con ${m.titulo === "Dra." ? "ella" : "\xE9l"}` }, { id: `esp:otros:${ESPECIALIDADES.indexOf(e)}`, titulo: "Ver otros" }]
         }];
       }
@@ -644,8 +644,8 @@ ${contexto2}
         tipo: "botones",
         texto: `Todav\xEDa no tenemos ${e.plural} en *Aid\xFA Med*, pero estamos sumando m\xE9dicos cada semana \u{1F49A}
 
-\xBFQuieres que te avisemos por aqu\xED cuando se sume uno?`,
-        botones: [{ id: `avisar:${indice}`, titulo: "S\xED, av\xEDsame" }, { id: "reg:otro", titulo: "Buscar otra" }]
+\xBFDesea que le avisemos por aqu\xED cuando se sume uno?`,
+        botones: [{ id: `avisar:${indice}`, titulo: "S\xED, av\xEDseme" }, { id: "reg:otro", titulo: "Buscar otra" }]
       }];
     }
     if (lista.length === 1) {
@@ -661,7 +661,7 @@ ${contexto2}
     this.ir("elegir_medico", {});
     return [{
       tipo: "lista",
-      texto: `Estos son los ${e.plural} de *Aid\xFA Med*. Elige con qui\xE9n quieres tu cita:`,
+      texto: `Estos son los ${e.plural} de *Aid\xFA Med*. Elija con qui\xE9n desea su cita:`,
       boton: "Ver m\xE9dicos",
       secciones: [{
         titulo: corto(e.nombre, 24),
@@ -680,7 +680,7 @@ ${contexto2}
     if (!citas.length) {
       return [{
         tipo: "botones",
-        texto: "No tienes citas pr\xF3ximas. \xBFQuieres agendar una?",
+        texto: "No tiene citas pr\xF3ximas. \xBFDesea agendar una?",
         botones: [...this.medico ? [{ id: `reg:mismo:${this.medico.id}`, titulo: "Cita \xFAltimo m\xE9dico" }] : [], { id: "reg:otro", titulo: "Cita con otro m\xE9dico" }]
       }];
     }
@@ -689,7 +689,7 @@ ${contexto2}
     this.ir("mis_citas", {});
     return [{
       tipo: "lista",
-      texto: citas.length === 1 ? "Esta es tu pr\xF3xima cita. T\xF3cala para cambiarla o cancelarla:" : "Estas son tus pr\xF3ximas citas. Toca una para cambiarla o cancelarla:",
+      texto: citas.length === 1 ? "Esta es su pr\xF3xima cita. T\xF3quela para cambiarla o cancelarla:" : "Estas son sus pr\xF3ximas citas. Toque una para cambiarla o cancelarla:",
       boton: "Ver citas",
       secciones: [{
         titulo: "Pr\xF3ximas citas",
@@ -745,9 +745,9 @@ ${contexto2}
       const e = ESPECIALIDADES[Number(v)];
       if (e) await this.d.almacen.guardarSolicitud(this.e.telefono, e.nombre);
       this.ir("inicio", {});
-      return [{ tipo: "texto", texto: `\xA1Listo! Te escribiremos por aqu\xED en cuanto ${e ? `tengamos ${e.plural}` : "tengamos esa especialidad"} en Aid\xFA Med. \u{1F64C}
+      return [{ tipo: "texto", texto: `\xA1Listo! Le escribiremos por aqu\xED en cuanto ${e ? `tengamos ${e.plural}` : "tengamos esa especialidad"} en Aid\xFA Med. \u{1F64C}
 
-Mientras tanto, si necesitas otra especialidad, escr\xEDbela cuando quieras.` }];
+Mientras tanto, si necesita otra especialidad, escr\xEDbala cuando guste.` }];
     }
     if (k === "cita") return this.accionesCita(v);
     if (!this.medico) return this.inicio();
@@ -757,7 +757,7 @@ Mientras tanto, si necesitas otra especialidad, escr\xEDbela cuando quieras.` }]
         if (v === "citas") return this.misCitas();
         if (v === "pregunta") {
           this.ir("consulta", {});
-          return [{ tipo: "texto", texto: "Claro, escr\xEDbeme tu pregunta: horarios, precios, ubicaci\xF3n o lo que necesites saber del consultorio." }];
+          return [{ tipo: "texto", texto: "Claro, escr\xEDbame su pregunta: horarios, precios, ubicaci\xF3n o lo que necesite saber del consultorio." }];
         }
         return this.menu();
       case "srv":
@@ -775,14 +775,14 @@ Mientras tanto, si necesitas otra especialidad, escr\xEDbela cuando quieras.` }]
       case "nom":
         if (v === "otro") {
           this.ir("nombre");
-          return [{ tipo: "texto", texto: "Escribe el *nombre completo* de la persona que ir\xE1 a la cita." }];
+          return [{ tipo: "texto", texto: "Escriba el *nombre completo* de la persona que ir\xE1 a la cita." }];
         }
         this.datos.nombre = this.datos.nombreSugerido;
         return this.confirmar();
       case "conf":
         if (v === "si") return this.crear();
         if (v === "hora") return this.mostrarDias();
-        return this.menu("Listo, no agend\xE9 nada. \xBFTe ayudo con algo m\xE1s?");
+        return this.menu("Listo, no agend\xE9 nada. \xBFLe ayudo con algo m\xE1s?");
       case "cita":
         return this.accionesCita(v);
       case "acc":
@@ -791,7 +791,7 @@ Mientras tanto, si necesitas otra especialidad, escr\xEDbela cuando quieras.` }]
         return this.menu();
       case "canc":
         if (v === "si") return this.cancelar();
-        return this.menu("Perfecto, tu cita sigue en pie. \xBFTe ayudo con algo m\xE1s?");
+        return this.menu("Perfecto, su cita sigue en pie. \xBFLe ayudo con algo m\xE1s?");
       case "cons":
         if (v === "consultorio") return this.contacto();
         if (v === "agendar") return this.iniciarAgenda();
@@ -803,13 +803,13 @@ Mientras tanto, si necesitas otra especialidad, escr\xEDbela cuando quieras.` }]
   async porTexto(texto2) {
     const paso = this.conv.paso;
     if (!texto2) return this.medico ? this.repetir() : this.inicio();
-    if (/^(menu|menú|inicio|volver|empezar)\W*$/i.test(texto2)) return this.medico ? this.menu("\xBFEn qu\xE9 te ayudo?") : this.inicio();
+    if (/^(menu|menú|inicio|volver|empezar)\W*$/i.test(texto2)) return this.medico ? this.menu("\xBFEn qu\xE9 le puedo ayudar?") : this.inicio();
     if (paso === "buscar_especialidad" || paso === "sin_especialidad") return this.buscarEspecialidad(texto2);
     if (paso === "elegir_medico") return especialidadEnTexto(texto2) ? this.buscarEspecialidad(texto2) : this.buscarMedico(texto2);
     if (paso === "prospecto") return this.guardarProspecto(texto2);
     if (paso === "nombre" && this.medico) {
       const n = limpiarNombre(texto2);
-      if (n.length < 3) return [{ tipo: "texto", texto: "\xBFMe escribes el nombre completo, por favor? (nombre y apellido)" }];
+      if (n.length < 3) return [{ tipo: "texto", texto: "\xBFMe escribe el nombre completo, por favor? (nombre y apellido)" }];
       this.datos.nombre = n;
       return this.confirmar();
     }
@@ -826,7 +826,7 @@ Mientras tanto, si necesitas otra especialidad, escr\xEDbela cuando quieras.` }]
       }
       if (niega) {
         this.ir("nombre");
-        return [{ tipo: "texto", texto: "Escribe el *nombre completo* de la persona que ir\xE1 a la cita." }];
+        return [{ tipo: "texto", texto: "Escriba el *nombre completo* de la persona que ir\xE1 a la cita." }];
       }
     }
     if (this.medico && paso === "confirmar" && afirma) return this.crear();
@@ -834,7 +834,7 @@ Mientras tanto, si necesitas otra especialidad, escr\xEDbela cuando quieras.` }]
     if (paso === "cabecera" && niega) return this.medicosDeEspecialidad(ESPECIALIDADES.findIndex((x) => x.nombre === this.datos.especialidad));
     if (paso === "cabecera" && especialidadEnTexto(texto2)) return this.buscarEspecialidad(texto2);
     if (this.medico && paso === "cancelar" && afirma) return this.cancelar();
-    if (this.medico && paso === "cancelar" && niega) return this.menu("Perfecto, tu cita sigue en pie. \xBFTe ayudo con algo m\xE1s?");
+    if (this.medico && paso === "cancelar" && niega) return this.menu("Perfecto, su cita sigue en pie. \xBFLe ayudo con algo m\xE1s?");
     const ip = await this.interpretar(texto2);
     if (!this.medico) {
       if (ip.intencion === "soy_medico") return this.prospecto();
@@ -858,7 +858,7 @@ Mientras tanto, si necesitas otra especialidad, escr\xEDbela cuando quieras.` }]
       return this.iniciarAgenda(ip, true);
     }
     if (paso === "consulta") return this.responder(ip);
-    return this.repetir("No te entend\xED bien \u{1F64F}");
+    return this.repetir("Disculpe, no le entend\xED bien \u{1F64F}");
   }
   async interpretar(texto2) {
     const opciones = this.opcionesVisibles();
@@ -884,12 +884,12 @@ Mientras tanto, si necesitas otra especialidad, escr\xEDbela cuando quieras.` }]
   /** Vuelve a mostrar lo que se esperaba en el paso actual. */
   async repetir(prefijo) {
     const p = this.conv.paso;
-    const pre = prefijo ? [{ tipo: "texto", texto: `${prefijo} Puedes usar las opciones o escribir *men\xFA* para empezar de nuevo.` }] : [];
+    const pre = prefijo ? [{ tipo: "texto", texto: `${prefijo} Puede usar las opciones o escribir *men\xFA* para empezar de nuevo.` }] : [];
     if (p === "servicio") return [...pre, ...await this.iniciarAgenda()];
     if (p === "dia") return [...pre, ...await this.mostrarDias()];
     if (p === "hora") return [...pre, ...await this.mostrarHoras()];
     if (p === "confirmar") return [...pre, ...this.confirmar()];
-    return [...pre, ...this.menu("\xBFEn qu\xE9 te ayudo?")];
+    return [...pre, ...this.menu("\xBFEn qu\xE9 le puedo ayudar?")];
   }
   // ----- Agendar -----
   servicios() {
@@ -920,7 +920,7 @@ Mientras tanto, si necesitas otra especialidad, escr\xEDbela cuando quieras.` }]
       this.ir("servicio");
       return [{
         tipo: "lista",
-        texto: "\xBFQu\xE9 servicio necesitas?",
+        texto: "\xBFQu\xE9 servicio necesita?",
         boton: "Ver servicios",
         secciones: [{
           titulo: "Servicios",
@@ -972,7 +972,7 @@ Mientras tanto, si necesitas otra especialidad, escr\xEDbela cuando quieras.` }]
     return [...pre, {
       tipo: "lista",
       texto: `*${serv.nombre}*${serv.duracion ? ` (${serv.duracion})` : ""}
-\xBFQu\xE9 d\xEDa te queda mejor?`,
+\xBFQu\xE9 d\xEDa le queda mejor?`,
       boton: "Ver d\xEDas",
       secciones: [{ titulo: "D\xEDas disponibles", filas }]
     }];
@@ -984,7 +984,7 @@ Mientras tanto, si necesitas otra especialidad, escr\xEDbela cuando quieras.` }]
     const [ocupado, feriados] = [await this.ocupado(), await this.d.almacen.feriados()];
     let libres = horariosDelDia(m, fecha, dur, ocupado, rangosLibres(m, feriados, Number(fecha.slice(0, 4))), this.d.ahora);
     if (!libres.length) {
-      return [{ tipo: "texto", texto: "Ese d\xEDa ya se llen\xF3. Elige otro, por favor:" }, ...await this.mostrarDias()];
+      return [{ tipo: "texto", texto: "Ese d\xEDa ya se llen\xF3. Elija otro, por favor:" }, ...await this.mostrarDias()];
     }
     const pre = [];
     if (this.datos.horaPreferida) {
@@ -1040,7 +1040,7 @@ Mientras tanto, si necesitas otra especialidad, escr\xEDbela cuando quieras.` }]
       }];
     }
     this.ir("nombre");
-    return [{ tipo: "texto", texto: "\xBFA nombre de qui\xE9n agendo la cita? Escribe *nombre y apellido*." }];
+    return [{ tipo: "texto", texto: "\xBFA nombre de qui\xE9n agendo la cita? Escriba *nombre y apellido*." }];
   }
   resumen() {
     const m = this.medico, serv = this.servicioElegido(), inicio = new Date(this.datos.hora);
@@ -1055,7 +1055,7 @@ Mientras tanto, si necesitas otra especialidad, escr\xEDbela cuando quieras.` }]
   confirmar() {
     if (!this.servicioElegido() || !this.datos.hora || !this.datos.nombre) return this.menu();
     this.ir("confirmar");
-    const titulo = this.datos.citaId ? "As\xED quedar\xEDa tu cita *reagendada*:" : "Revisa tu cita:";
+    const titulo = this.datos.citaId ? "As\xED quedar\xEDa su cita *reagendada*:" : "Revise su cita:";
     return [{
       tipo: "botones",
       texto: `${titulo}
@@ -1072,7 +1072,7 @@ ${this.resumen()}`,
     const libres = horariosDelDia(m, fecha, dur, await this.ocupado(), rangosLibres(m, await a.feriados(), Number(fecha.slice(0, 4))), this.d.ahora);
     if (!libres.some((t) => t.getTime() === inicio.getTime())) {
       this.datos.dia = fecha;
-      return [{ tipo: "texto", texto: "Uy, ese horario se acaba de ocupar. Elige otro, por favor:" }, ...await this.mostrarHoras()];
+      return [{ tipo: "texto", texto: "Disculpe, ese horario se acaba de ocupar. Elija otro, por favor:" }, ...await this.mostrarHoras()];
     }
     let pac = await a.paciente(this.e.telefono);
     if (!pac) pac = await a.guardarPaciente(this.e.telefono, this.datos.nombre);
@@ -1091,7 +1091,7 @@ ${this.resumen()}`,
     });
     if (res === "ocupado") {
       this.datos.dia = fecha;
-      return [{ tipo: "texto", texto: "Uy, ese horario se acaba de ocupar. Elige otro, por favor:" }, ...await this.mostrarHoras()];
+      return [{ tipo: "texto", texto: "Disculpe, ese horario se acaba de ocupar. Elija otro, por favor:" }, ...await this.mostrarHoras()];
     }
     const resumen = this.resumen();
     const reagendada = !!this.datos.citaId;
@@ -1107,11 +1107,11 @@ ${this.resumen()}`,
 \u{1F5FA}\uFE0F ${m.ubicacion_gps}` : "";
     return [{
       tipo: "texto",
-      texto: `\u2705 \xA1Listo! Tu cita qued\xF3 ${reagendada ? "reagendada" : "agendada"}:
+      texto: `\u2705 \xA1Listo! Su cita qued\xF3 ${reagendada ? "reagendada" : "agendada"}:
 
 ${resumen}${mapa}
 
-Te enviar\xE9 un recordatorio el d\xEDa anterior por la tarde. Si necesitas cambiarla o cancelarla, escribe *mis citas*.`
+Le enviar\xE9 un recordatorio el d\xEDa anterior por la tarde. Si necesita cambiarla o cancelarla, escriba *mis citas*.`
     }];
   }
   // ----- Mis citas -----
@@ -1119,7 +1119,7 @@ Te enviar\xE9 un recordatorio el d\xEDa anterior por la tarde. Si necesitas camb
     const pac = await this.d.almacen.paciente(this.e.telefono);
     const citas = pac ? await this.d.almacen.citasFuturas(pac.id, this.medico.id, this.d.ahora) : [];
     if (!citas.length) {
-      return this.menu(`No tienes citas pr\xF3ximas con ${nombreMedico(this.medico)}. \xBFQuieres agendar una?`);
+      return this.menu(`No tiene citas pr\xF3ximas con ${nombreMedico(this.medico)}. \xBFDesea agendar una?`);
     }
     if (citas.length === 1 && (intencion === "reagendar" || intencion === "cancelar")) {
       this.datos.citaId = citas[0].id;
@@ -1128,7 +1128,7 @@ Te enviar\xE9 un recordatorio el d\xEDa anterior por la tarde. Si necesitas camb
     this.ir("mis_citas", {});
     return [{
       tipo: "lista",
-      texto: citas.length === 1 ? "Esta es tu pr\xF3xima cita:" : "Estas son tus pr\xF3ximas citas:",
+      texto: citas.length === 1 ? "Esta es su pr\xF3xima cita:" : "Estas son sus pr\xF3ximas citas:",
       boton: "Ver citas",
       secciones: [{
         titulo: "Pr\xF3ximas citas",
@@ -1148,20 +1148,20 @@ Te enviar\xE9 un recordatorio el d\xEDa anterior por la tarde. Si necesitas camb
   }
   async accionesCita(id) {
     const c = await this.citaPropia(id);
-    if (!c) return this.medico ? this.menu("Esa cita ya no est\xE1 disponible. \xBFEn qu\xE9 te ayudo?") : this.inicio();
+    if (!c) return this.medico ? this.menu("Esa cita ya no est\xE1 disponible. \xBFEn qu\xE9 le puedo ayudar?") : this.inicio();
     if (!this.medico || this.medico.id !== c.medico_id) this.medico = await this.d.almacen.medicoPorId(c.medico_id);
     if (!this.medico) return this.inicio();
     this.ir("cita", { citaId: c.id });
     const i = new Date(c.inicio);
     return [{
       tipo: "botones",
-      texto: `Tu cita con ${conArticuloNegrita(this.medico)}:
+      texto: `Su cita con ${conArticuloNegrita(this.medico)}:
 
 \u{1F4C5} ${fechaLarga(fechaLocal(i))}, ${hora12(i)}
 \u{1FA7A} ${c.servicio}${c.nombre_paciente ? `
 \u{1F464} ${c.nombre_paciente}` : ""}
 
-\xBFQu\xE9 quieres hacer?`,
+\xBFQu\xE9 desea hacer?`,
       botones: [{ id: "acc:reagendar", titulo: "Reagendar" }, { id: "acc:cancelar", titulo: "Cancelar cita" }, { id: "acc:volver", titulo: "Volver" }]
     }];
   }
@@ -1180,26 +1180,26 @@ Te enviar\xE9 un recordatorio el d\xEDa anterior por la tarde. Si necesitas camb
     const i = new Date(c.inicio);
     return [{
       tipo: "botones",
-      texto: `\xBFSeguro que quieres cancelar tu cita del *${fechaLarga(fechaLocal(i)).toLowerCase()}, ${hora12(i)}*?`,
+      texto: `\xBFEst\xE1 seguro de cancelar su cita del *${fechaLarga(fechaLocal(i)).toLowerCase()}, ${hora12(i)}*?`,
       botones: [{ id: "canc:si", titulo: "S\xED, cancelar" }, { id: "canc:no", titulo: "No, mantenerla" }]
     }];
   }
   async cancelar() {
     const c = this.datos.citaId ? await this.citaPropia(this.datos.citaId) : null;
-    if (!c) return this.menu("Esa cita ya no est\xE1 disponible. \xBFEn qu\xE9 te ayudo?");
+    if (!c) return this.menu("Esa cita ya no est\xE1 disponible. \xBFEn qu\xE9 le puedo ayudar?");
     await this.d.almacen.cancelarCita(c.id, "paciente");
     await this.d.avisos.citaCancelada(this.medico, c, this.e.telefono);
-    return this.menu("Tu cita qued\xF3 *cancelada*. Ya le avis\xE9 al consultorio. \xBFQuieres agendar otra?");
+    return this.menu("Su cita qued\xF3 *cancelada*. Ya le avis\xE9 al consultorio. \xBFDesea agendar otra?");
   }
   // ----- Respuesta al recordatorio -----
   async respuestaRecordatorio(accion, citaId) {
     const c = await this.d.almacen.cita(citaId);
     const pac = await this.d.almacen.paciente(this.e.telefono);
-    if (!c || !pac || c.paciente_id !== pac.id) return this.medico ? this.menu("No encontr\xE9 esa cita. \xBFEn qu\xE9 te ayudo?") : this.inicio();
+    if (!c || !pac || c.paciente_id !== pac.id) return this.medico ? this.menu("No encontr\xE9 esa cita. \xBFEn qu\xE9 le puedo ayudar?") : this.inicio();
     const m = await this.d.almacen.medicoPorId(c.medico_id);
     if (!m) return this.inicio();
     this.medico = m;
-    if (c.estado !== "confirmada" || new Date(c.inicio) < this.d.ahora) return this.menu("Esa cita ya no est\xE1 activa. \xBFEn qu\xE9 te ayudo?");
+    if (c.estado !== "confirmada" || new Date(c.inicio) < this.d.ahora) return this.menu("Esa cita ya no est\xE1 activa. \xBFEn qu\xE9 le puedo ayudar?");
     this.conv.datos = { citaId: c.id };
     if (accion === "cambiar") return this.reagendar();
     if (accion === "cancelar") return this.preguntarCancelar();
@@ -1209,7 +1209,7 @@ Te enviar\xE9 un recordatorio el d\xEDa anterior por la tarde. Si necesitas camb
     const lugar = [m.consultorio, m.direccion].filter(Boolean).join(", ");
     return [{
       tipo: "texto",
-      texto: `\xA1Gracias por confirmar! \u{1F64C} Te esperamos el *${fechaLarga(fechaLocal(i)).toLowerCase()} a las ${hora12(i)}*${lugar ? `
+      texto: `\xA1Gracias por confirmar! \u{1F64C} Le esperamos el *${fechaLarga(fechaLocal(i)).toLowerCase()} a las ${hora12(i)}*${lugar ? `
 
 \u{1F4CD} ${lugar}` : ""}${m.ubicacion_gps ? `
 \u{1F5FA}\uFE0F ${m.ubicacion_gps}` : ""}`
@@ -1222,7 +1222,7 @@ Te enviar\xE9 un recordatorio el d\xEDa anterior por la tarde. Si necesitas camb
     if (ip.respuesta && ip.puede_responder !== false) {
       return [{ tipo: "botones", texto: ip.respuesta, botones }];
     }
-    return [{ tipo: "texto", texto: "Esa pregunta es mejor que te la responda el consultorio directamente." }, ...this.contacto()];
+    return [{ tipo: "texto", texto: "Esa pregunta es mejor que se la responda el consultorio directamente." }, ...this.contacto()];
   }
   contacto() {
     const m = this.medico;
@@ -1235,7 +1235,7 @@ Te enviar\xE9 un recordatorio el d\xEDa anterior por la tarde. Si necesitas camb
       m.telefono_consultorio ? `\u{1F4DE} Tel\xE9fono: ${m.telefono_consultorio}` : ""
     ].filter(Boolean);
     this.ir("menu", {});
-    return [{ tipo: "botones", texto: lineas.length ? `Puedes comunicarte con el consultorio aqu\xED:
+    return [{ tipo: "botones", texto: lineas.length ? `Puede comunicarse con el consultorio aqu\xED:
 
 ${lineas.join("\n")}` : "Por ahora no tengo otro contacto del consultorio.", botones: BOTONES_MENU }];
   }
@@ -1245,7 +1245,7 @@ ${lineas.join("\n")}` : "Por ahora no tengo otro contacto del consultorio.", bot
     if (!lista.length) {
       return [{
         tipo: "botones",
-        texto: "No encontr\xE9 a ese m\xE9dico en Aid\xFA Med. Revisa el nombre o pide al consultorio su *c\xF3digo* (por ejemplo: IB24) y escr\xEDbelo aqu\xED.",
+        texto: "No encontr\xE9 a ese m\xE9dico en Aid\xFA Med. Revise el nombre o pida al consultorio su *c\xF3digo* (por ejemplo: IB24) y escr\xEDbalo aqu\xED.",
         botones: [{ id: "ini:medico", titulo: "Soy m\xE9dico" }]
       }];
     }
@@ -1255,7 +1255,7 @@ ${lineas.join("\n")}` : "Por ahora no tengo otro contacto del consultorio.", bot
     }
     return [{
       tipo: "lista",
-      texto: "Encontr\xE9 estos m\xE9dicos. \xBFCu\xE1l es el tuyo?",
+      texto: "Encontr\xE9 estos m\xE9dicos. \xBFCu\xE1l es el suyo?",
       boton: "Ver m\xE9dicos",
       secciones: [{
         titulo: "M\xE9dicos",
@@ -1303,7 +1303,7 @@ var HERRAMIENTA = {
       hora: { type: "string", description: "Hora exacta que pide, formato 24 h HH:MM." },
       nombre: { type: "string", description: "Nombre de la persona para la cita, si lo dice." },
       puede_responder: { type: "boolean", description: "true si la pregunta se responde con los datos del consultorio o es m\xE9dica/emergencia (respuesta prudente)." },
-      respuesta: { type: "string", description: "Solo si intencion es pregunta: respuesta breve (m\xE1ximo 3 oraciones), tuteando, sin inventar datos." }
+      respuesta: { type: "string", description: "Solo si intencion es pregunta: respuesta breve (m\xE1ximo 3 oraciones), tratando al paciente de usted, sin inventar datos." }
     },
     required: ["intencion"]
   }
@@ -1337,7 +1337,7 @@ function crearCerebro(apiKey, alUsar) {
         "Tu \xFAnica tarea es entender el \xFAltimo mensaje del paciente y llamar a la herramienta 'interpretar'.",
         "Reglas:",
         "- Usa solo los datos del consultorio de abajo. Nunca inventes precios, horarios, direcciones ni servicios.",
-        "- Si pregunta algo que esos datos responden, intencion 'pregunta', puede_responder true y una respuesta breve y amable, tuteando.",
+        "- Si pregunta algo que esos datos responden, intencion 'pregunta', puede_responder true y una respuesta breve y amable, tratando al paciente de usted.",
         "- Si pregunta por disponibilidad de un d\xEDa concreto, intencion 'agendar' con la fecha (el sistema revisa los horarios); no respondas t\xFA si hay espacio.",
         "- Preguntas m\xE9dicas (s\xEDntomas, medicamentos, diagn\xF3sticos): no des consejo; responde que lo mejor es agendar una consulta. Si describe una emergencia, indica llamar al 911 o ir a la emergencia m\xE1s cercana. En ambos casos puede_responder true.",
         "- Si no se puede responder con los datos, intencion 'pregunta' y puede_responder false.",
@@ -1397,13 +1397,16 @@ function respuesta(indice, payload) {
   return { type: "button", sub_type: "quick_reply", index: String(indice), parameters: [{ type: "payload", payload }] };
 }
 function recordatorio(para, c, m) {
+  return ["recordatorio_cita_v2", "recordatorio_cita"].map((nombre) => recordatorioCon(nombre, para, c, m));
+}
+function recordatorioCon(nombre, para, c, m) {
   const i = new Date(c.inicio);
   return {
     messaging_product: "whatsapp",
     to: para,
     type: "template",
     template: {
-      name: "recordatorio_cita",
+      name: nombre,
       language: { code: "es" },
       components: [
         {
@@ -1424,20 +1427,24 @@ function recordatorio(para, c, m) {
   };
 }
 function canceladaPorConsultorio(para, c, m) {
+  return [canceladaCon("cita_cancelada_v2", para, c, m), canceladaCon("cita_cancelada_consultorio", para, c, m)];
+}
+function canceladaCon(nombre, para, c, m) {
   const i = new Date(c.inicio);
+  const medico = nombre === "cita_cancelada_v2" ? (m.titulo === "Dra." ? "de la " : m.titulo === "Dr." ? "del " : "de ") + nombreMedico2(m) : nombreMedico2(m);
   return {
     messaging_product: "whatsapp",
     to: para,
     type: "template",
     template: {
-      name: "cita_cancelada_consultorio",
+      name: nombre,
       language: { code: "es" },
       components: [
         {
           type: "body",
           parameters: [
             texto(limpio(primerNombre(c.nombre_paciente) || "hola", 40)),
-            texto(limpio(nombreMedico2(m))),
+            texto(limpio(medico)),
             texto(limpio(fechaLarga(fechaLocal(i)).toLowerCase())),
             texto(limpio(hora12(i)))
           ]
@@ -1455,18 +1462,22 @@ function destino(m) {
   return m.numero_consultorio ? `Consultorio ${m.numero_consultorio}` : m.consultorio || "el consultorio";
 }
 function turnoListo(para, c, m) {
+  return ["turno_listo_v2", "turno_listo"].map((nombre) => turnoCon(nombre, para, c, m));
+}
+function turnoCon(nombre, para, c, m) {
+  const quien = nombre === "turno_listo_v2" ? conArticulo(m).charAt(0).toUpperCase() + conArticulo(m).slice(1) : conArticulo(m);
   return {
     messaging_product: "whatsapp",
     to: para,
     type: "template",
     template: {
-      name: "turno_listo",
+      name: nombre,
       language: { code: "es" },
       components: [{
         type: "body",
         parameters: [
           texto(limpio(primerNombre(c.nombre_paciente) || "hola", 40)),
-          texto(limpio(conArticulo(m))),
+          texto(limpio(quien)),
           texto(limpio(destino(m), 80))
         ]
       }]
@@ -1478,9 +1489,9 @@ function turnoListoTexto(c, m) {
   const listo = m.titulo === "Dra." ? "lista" : "listo";
   const nombre = primerNombre(c.nombre_paciente);
   const a = m.numero_consultorio ? `al *Consultorio ${m.numero_consultorio}*` : m.consultorio ? `a *${m.consultorio}*` : "al consultorio";
-  return `Hola${nombre ? ` ${nombre}` : ""} \u{1F44B}
+  return `Hola${nombre ? `, ${nombre}` : ""} \u{1F44B}
 
-${quien.charAt(0).toUpperCase() + quien.slice(1)} est\xE1 ${listo} para atenderte. Por favor, dir\xEDgete ${a}.`;
+${quien.charAt(0).toUpperCase() + quien.slice(1)} est\xE1 ${listo} para atenderle. Por favor, dir\xEDjase ${a}.`;
 }
 
 // whatsapp.ts
@@ -1690,9 +1701,7 @@ async function recordatorios() {
       pendientes++;
       continue;
     }
-    const carga = recordatorio(tel, fila, fila.medicos);
-    const id = await enviar(tel, carga);
-    await almacen.registrar(tel, "saliente", carga, id, fila.medico_id);
+    const id = await enviarPlantilla(tel, recordatorio(tel, fila, fila.medicos), fila.medico_id);
     if (id) {
       enviados++;
       await sb.from("citas").update({ recordatorio_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", fila.id);
@@ -1713,10 +1722,19 @@ async function evento(req) {
   const r = await sb.from("citas").select("*, pacientes(telefono), medicos(*)").eq("id", cita_id).maybeSingle();
   const tel = r.data?.pacientes?.telefono;
   if (!r.data || !tel || esSimulado(tel) || !whatsappListo()) return new Response("Sin env\xEDo");
-  const carga = canceladaPorConsultorio(tel, r.data, r.data.medicos);
-  const id = await enviar(tel, carga);
-  await almacen.registrar(tel, "saliente", carga, id, r.data.medico_id);
+  const id = await enviarPlantilla(tel, canceladaPorConsultorio(tel, r.data, r.data.medicos), r.data.medico_id);
   return new Response(id ? "Enviado" : "Error al enviar");
+}
+async function enviarPlantilla(tel, opciones, medicoId) {
+  for (const carga of opciones) {
+    const id = await enviar(tel, carga);
+    if (id) {
+      await almacen.registrar(tel, "saliente", carga, id, medicoId);
+      return id;
+    }
+  }
+  await almacen.registrar(tel, "saliente", opciones[opciones.length - 1], null, medicoId);
+  return null;
 }
 async function panel(req) {
   const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
@@ -1758,9 +1776,8 @@ async function panel(req) {
     if (!whatsappListo()) return json(req, { error: "WhatsApp no est\xE1 configurado todav\xEDa." }, 503);
     const ult = await sb.from("mensajes").select("creado_at").eq("telefono", tel).eq("direccion", "entrante").gte("creado_at", new Date(Date.now() - 23.5 * 36e5).toISOString()).limit(1);
     const enVentana = !!ult.data?.length;
-    const carga = enVentana ? cargaUtil(tel, { tipo: "texto", texto: turnoListoTexto(r.data, m) }) : turnoListo(tel, r.data, m);
-    const id = await enviar(tel, carga);
-    await almacen.registrar(tel, "saliente", carga, id, uid);
+    const opciones = enVentana ? [cargaUtil(tel, { tipo: "texto", texto: turnoListoTexto(r.data, m) })] : turnoListo(tel, r.data, m);
+    const id = await enviarPlantilla(tel, opciones, uid);
     if (!id) return json(req, { error: "WhatsApp no acept\xF3 el mensaje. Intente de nuevo en un momento." }, 502);
     await sb.from("citas").update({ llamado_at: ahora }).eq("id", r.data.id);
     return json(req, { ok: true, via: enVentana ? "texto" : "plantilla", llamado_at: ahora });
@@ -1939,6 +1956,47 @@ var PLANTILLAS = [
       },
       { type: "FOOTER", text: "Aid\xFA Med \xB7 Asistente de citas" },
       { type: "BUTTONS", buttons: [{ type: "QUICK_REPLY", text: "Elegir otra fecha" }] }
+    ]
+  },
+  {
+    name: "recordatorio_cita_v2",
+    language: "es",
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text: "Hola, {{1}}. Le recordamos su cita con {{2}} el *{{3}}* a las *{{4}}*.\n\nLugar: {{5}}.\n\n\xBFNos confirma su asistencia?",
+        example: { body_text: [["Mar\xEDa", "Dr. Luis Espinoza", "martes 11 de noviembre", "10:00 a. m.", "Consultorio 204 \xB7 Cl\xEDnica Sonrisa, Barrio El Centro, San Pedro Sula"]] }
+      },
+      { type: "FOOTER", text: "Aid\xFA Med \xB7 Asistente de citas" },
+      { type: "BUTTONS", buttons: [{ type: "QUICK_REPLY", text: "Confirmo" }, { type: "QUICK_REPLY", text: "Cambiar fecha" }, { type: "QUICK_REPLY", text: "Cancelar cita" }] }
+    ]
+  },
+  {
+    name: "cita_cancelada_v2",
+    language: "es",
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text: "Hola, {{1}}. Le escribimos del consultorio {{2}}.\n\nPor motivos fuera de nuestro control, necesitamos reprogramar su cita del *{{3}}* a las *{{4}}*.\n\nLamentamos las molestias que esto pueda causarle.\n\n\xBFDesea elegir otra fecha?",
+        example: { body_text: [["Mar\xEDa", "del Dr. Luis Espinoza", "jueves 12 de noviembre", "4:30 p. m."]] }
+      },
+      { type: "FOOTER", text: "Aid\xFA Med \xB7 Asistente de citas" },
+      { type: "BUTTONS", buttons: [{ type: "QUICK_REPLY", text: "Elegir otra fecha" }] }
+    ]
+  },
+  {
+    name: "turno_listo_v2",
+    language: "es",
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text: "Hola, {{1}}. {{2}} ya puede atenderle.\n\nPor favor, dir\xEDjase a: *{{3}}*. \xA1Le esperamos!",
+        example: { body_text: [["Mar\xEDa", "El Dr. Luis Espinoza", "Consultorio 204"]] }
+      },
+      { type: "FOOTER", text: "Aid\xFA Med \xB7 Asistente de citas" }
     ]
   },
   {

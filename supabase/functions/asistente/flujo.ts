@@ -206,7 +206,7 @@ class Sesion {
   }
 
   // ----- Inicio, sin médico elegido -----
-  inicio(texto = "¡Hola! 👋 Soy el asistente de citas de *Aidú Med*. ¿Eres paciente o médico?"): Salida[] {
+  inicio(texto = "¡Hola! 👋 Soy el asistente de citas de *Aidú Med*. ¿Es usted paciente o médico?"): Salida[] {
     this.ir("inicio", {});
     return [{ tipo: "botones", texto, botones: [{ id: "ini:paciente", titulo: "Soy paciente" }, { id: "ini:medico", titulo: "Soy médico" }] }];
   }
@@ -219,12 +219,12 @@ class Sesion {
     const esp = especialidad(m);
     return [{
       tipo: "botones",
-      texto: `¡Hola${nombre ? `, ${nombre}` : ""}! 👋 Soy el asistente de citas de *${nombreMedico(m)}*${esp ? ` (${esp})` : ""}.\n\n¿En qué te ayudo?`,
+      texto: `¡Hola${nombre ? `, ${nombre}` : ""}! 👋 Soy el asistente de citas ${m.titulo === "Dra." ? "de la" : m.titulo === "Dr." ? "del" : "de"} *${nombreMedico(m)}*${esp ? ` (${esp})` : ""}.\n\n¿En qué le puedo ayudar?`,
       botones: BOTONES_MENU,
     }];
   }
 
-  menu(texto = "¿En qué más te ayudo?"): Salida[] {
+  menu(texto = "¿En qué más le puedo ayudar?"): Salida[] {
     this.ir("menu", {});
     return [{ tipo: "botones", texto, botones: BOTONES_MENU }];
   }
@@ -236,7 +236,7 @@ class Sesion {
     const ultimoId = this.conv.medico_id || historial[0]?.medico_id || null;
     let ultimo = ultimoId ? await this.d.almacen.medicoPorId(ultimoId) : null;
     if (ultimo && !disponible(ultimo, this.d)) ultimo = null;
-    if (!ultimo) return this.inicio(`¡Hola de nuevo! 👋 Soy el asistente de citas de *Aidú Med*. ¿Eres paciente o médico?`);
+    if (!ultimo) return this.inicio(`¡Hola de nuevo! 👋 Soy el asistente de citas de *Aidú Med*. ¿Es usted paciente o médico?`);
     this.medico = ultimo;
     this.ir("regreso", {});
     const nombre = (pac?.nombre || (this.e.nombrePerfil ? limpiarNombre(this.e.nombrePerfil) : "")).split(" ")[0];
@@ -245,19 +245,19 @@ class Sesion {
     let contexto: string;
     const tuvoCita = historial.some((h) => h.medico_id === ultimo!.id);
     const ultimoTexto = tuvoCita
-      ? `tu última cita médica fue con ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`
-      : `la última vez nos consultaste por ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`;
+      ? `su última cita médica fue con ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`
+      : `la última vez nos consultó por ${conArticuloNegrita(ultimo)}${esp ? ` (${esp})` : ""}.`;
     if (proximas.length) {
       const c = proximas[0], i = new Date(c.inicio);
       const mc = c.medico_id === ultimo.id ? ultimo : await this.d.almacen.medicoPorId(c.medico_id);
-      contexto = `Observamos que tienes una cita con ${mc ? conArticuloNegrita(mc) : "tu médico"} el *${fechaLarga(fechaLocal(i)).toLowerCase()}* a las *${hora12(i)}* 📅`;
+      contexto = `Observamos que tiene una cita con ${mc ? conArticuloNegrita(mc) : "su médico"} el *${fechaLarga(fechaLocal(i)).toLowerCase()}* a las *${hora12(i)}* 📅`;
       if (!mc || mc.id !== ultimo.id) contexto += `\n\nTambién vemos que ${ultimoTexto}`;
     } else {
       contexto = `Vemos que ${ultimoTexto}`;
     }
     return [{
       tipo: "botones",
-      texto: `¡Hola de nuevo${nombre ? `, ${nombre}` : ""}! 👋\n\n${contexto}\n\n¿Con qué te podemos ayudar?`,
+      texto: `¡Hola de nuevo${nombre ? `, ${nombre}` : ""}! 👋\n\n${contexto}\n\n¿Con qué le podemos ayudar?`,
       botones: [
         { id: `reg:mismo:${ultimo.id}`, titulo: "Cita último médico" },
         { id: "reg:otro", titulo: "Cita con otro médico" },
@@ -268,7 +268,7 @@ class Sesion {
 
   pedirEspecialidad(prefijo = ""): Salida[] {
     this.ir("buscar_especialidad", {});
-    return [{ tipo: "texto", texto: `${prefijo}¿Qué especialidad o médico buscas? Escríbelo como quieras, por ejemplo: *pediatra*, *dentista*, *ginecóloga* o el *nombre del doctor*.` }];
+    return [{ tipo: "texto", texto: `${prefijo}¿Qué especialidad o médico busca? Escríbalo como guste, por ejemplo: *pediatra*, *dentista*, *ginecóloga* o el *nombre del doctor*.` }];
   }
 
   /** El paciente escribió una especialidad o un nombre. */
@@ -277,7 +277,7 @@ class Sesion {
     if (!e) {
       const porNombre = (await this.d.almacen.buscarMedicos(texto)).filter((m) => disponible(m, this.d));
       if (porNombre.length) return this.buscarMedico(texto);
-      return [{ tipo: "texto", texto: "No logré identificar la especialidad 🙏 Prueba con otra palabra, por ejemplo: *pediatra*, *dentista*, *dermatólogo* o el nombre del doctor." }];
+      return [{ tipo: "texto", texto: "No logré identificar la especialidad 🙏 Pruebe con otra palabra, por ejemplo: *pediatra*, *dentista*, *dermatólogo* o el nombre del doctor." }];
     }
     // Médico de cabecera: si ya tuvo cita con alguien de esa especialidad, se le ofrece primero.
     const pac = await this.d.almacen.paciente(this.e.telefono);
@@ -290,7 +290,7 @@ class Sesion {
         this.ir("cabecera", { especialidad: e.nombre });
         return [{
           tipo: "botones",
-          texto: `${m.titulo === "Dra." ? "La" : m.titulo === "Dr." ? "El" : ""} *${nombreMedico(m)}* (${e.nombre}) ya te atendió antes. ¿Agendamos con ${m.titulo === "Dra." ? "ella" : "él"}?`,
+          texto: `${m.titulo === "Dra." ? "La" : m.titulo === "Dr." ? "El" : ""} *${nombreMedico(m)}* (${e.nombre}) ya le atendió antes. ¿Agendamos con ${m.titulo === "Dra." ? "ella" : "él"}?`,
           botones: [{ id: `esp:si:${m.id}`, titulo: `Sí, con ${m.titulo === "Dra." ? "ella" : "él"}` }, { id: `esp:otros:${ESPECIALIDADES.indexOf(e)}`, titulo: "Ver otros" }],
         }];
       }
@@ -306,8 +306,8 @@ class Sesion {
       this.ir("sin_especialidad", { especialidad: e.nombre });
       return [{
         tipo: "botones",
-        texto: `Todavía no tenemos ${e.plural} en *Aidú Med*, pero estamos sumando médicos cada semana 💚\n\n¿Quieres que te avisemos por aquí cuando se sume uno?`,
-        botones: [{ id: `avisar:${indice}`, titulo: "Sí, avísame" }, { id: "reg:otro", titulo: "Buscar otra" }],
+        texto: `Todavía no tenemos ${e.plural} en *Aidú Med*, pero estamos sumando médicos cada semana 💚\n\n¿Desea que le avisemos por aquí cuando se sume uno?`,
+        botones: [{ id: `avisar:${indice}`, titulo: "Sí, avíseme" }, { id: "reg:otro", titulo: "Buscar otra" }],
       }];
     }
     if (lista.length === 1) {
@@ -322,7 +322,7 @@ class Sesion {
     }
     this.ir("elegir_medico", {});
     return [{
-      tipo: "lista", texto: `Estos son los ${e.plural} de *Aidú Med*. Elige con quién quieres tu cita:`, boton: "Ver médicos",
+      tipo: "lista", texto: `Estos son los ${e.plural} de *Aidú Med*. Elija con quién desea su cita:`, boton: "Ver médicos",
       secciones: [{
         titulo: corto(e.nombre, 24), filas: lista.slice(0, 10).map((m) => ({
           id: `med:${m.id}`, titulo: corto(nombreMedico(m), 24), descripcion: corto([m.consultorio, m.direccion].filter(Boolean).join(" · "), 72),
@@ -337,7 +337,7 @@ class Sesion {
     const citas = pac ? await this.d.almacen.citasFuturasTodas(pac.id, this.d.ahora) : [];
     if (!citas.length) {
       return [{
-        tipo: "botones", texto: "No tienes citas próximas. ¿Quieres agendar una?",
+        tipo: "botones", texto: "No tiene citas próximas. ¿Desea agendar una?",
         botones: [...(this.medico ? [{ id: `reg:mismo:${this.medico.id}`, titulo: "Cita último médico" }] : []), { id: "reg:otro", titulo: "Cita con otro médico" }],
       }];
     }
@@ -345,7 +345,7 @@ class Sesion {
     for (const c of citas) if (!medicos.has(c.medico_id)) medicos.set(c.medico_id, await this.d.almacen.medicoPorId(c.medico_id));
     this.ir("mis_citas", {});
     return [{
-      tipo: "lista", texto: citas.length === 1 ? "Esta es tu próxima cita. Tócala para cambiarla o cancelarla:" : "Estas son tus próximas citas. Toca una para cambiarla o cancelarla:", boton: "Ver citas",
+      tipo: "lista", texto: citas.length === 1 ? "Esta es su próxima cita. Tóquela para cambiarla o cancelarla:" : "Estas son sus próximas citas. Toque una para cambiarla o cancelarla:", boton: "Ver citas",
       secciones: [{
         titulo: "Próximas citas", filas: citas.map((c) => {
           const m = medicos.get(c.medico_id);
@@ -400,7 +400,7 @@ class Sesion {
       const e = ESPECIALIDADES[Number(v)];
       if (e) await this.d.almacen.guardarSolicitud(this.e.telefono, e.nombre);
       this.ir("inicio", {});
-      return [{ tipo: "texto", texto: `¡Listo! Te escribiremos por aquí en cuanto ${e ? `tengamos ${e.plural}` : "tengamos esa especialidad"} en Aidú Med. 🙌\n\nMientras tanto, si necesitas otra especialidad, escríbela cuando quieras.` }];
+      return [{ tipo: "texto", texto: `¡Listo! Le escribiremos por aquí en cuanto ${e ? `tengamos ${e.plural}` : "tengamos esa especialidad"} en Aidú Med. 🙌\n\nMientras tanto, si necesita otra especialidad, escríbala cuando guste.` }];
     }
     if (k === "cita") return this.accionesCita(v);
     if (!this.medico) return this.inicio();
@@ -411,7 +411,7 @@ class Sesion {
         if (v === "citas") return this.misCitas();
         if (v === "pregunta") {
           this.ir("consulta", {});
-          return [{ tipo: "texto", texto: "Claro, escríbeme tu pregunta: horarios, precios, ubicación o lo que necesites saber del consultorio." }];
+          return [{ tipo: "texto", texto: "Claro, escríbame su pregunta: horarios, precios, ubicación o lo que necesite saber del consultorio." }];
         }
         return this.menu();
       case "srv":
@@ -429,14 +429,14 @@ class Sesion {
       case "nom":
         if (v === "otro") {
           this.ir("nombre");
-          return [{ tipo: "texto", texto: "Escribe el *nombre completo* de la persona que irá a la cita." }];
+          return [{ tipo: "texto", texto: "Escriba el *nombre completo* de la persona que irá a la cita." }];
         }
         this.datos.nombre = this.datos.nombreSugerido;
         return this.confirmar();
       case "conf":
         if (v === "si") return this.crear();
         if (v === "hora") return this.mostrarDias();
-        return this.menu("Listo, no agendé nada. ¿Te ayudo con algo más?");
+        return this.menu("Listo, no agendé nada. ¿Le ayudo con algo más?");
       case "cita":
         return this.accionesCita(v);
       case "acc":
@@ -445,7 +445,7 @@ class Sesion {
         return this.menu();
       case "canc":
         if (v === "si") return this.cancelar();
-        return this.menu("Perfecto, tu cita sigue en pie. ¿Te ayudo con algo más?");
+        return this.menu("Perfecto, su cita sigue en pie. ¿Le ayudo con algo más?");
       case "cons":
         if (v === "consultorio") return this.contacto();
         if (v === "agendar") return this.iniciarAgenda();
@@ -459,13 +459,13 @@ class Sesion {
     const paso = this.conv.paso;
     if (!texto) return this.medico ? this.repetir() : this.inicio();
 
-    if (/^(menu|menú|inicio|volver|empezar)\W*$/i.test(texto)) return this.medico ? this.menu("¿En qué te ayudo?") : this.inicio();
+    if (/^(menu|menú|inicio|volver|empezar)\W*$/i.test(texto)) return this.medico ? this.menu("¿En qué le puedo ayudar?") : this.inicio();
     if (paso === "buscar_especialidad" || paso === "sin_especialidad") return this.buscarEspecialidad(texto);
     if (paso === "elegir_medico") return especialidadEnTexto(texto) ? this.buscarEspecialidad(texto) : this.buscarMedico(texto);
     if (paso === "prospecto") return this.guardarProspecto(texto);
     if (paso === "nombre" && this.medico) {
       const n = limpiarNombre(texto);
-      if (n.length < 3) return [{ tipo: "texto", texto: "¿Me escribes el nombre completo, por favor? (nombre y apellido)" }];
+      if (n.length < 3) return [{ tipo: "texto", texto: "¿Me escribe el nombre completo, por favor? (nombre y apellido)" }];
       this.datos.nombre = n;
       return this.confirmar();
     }
@@ -478,14 +478,14 @@ class Sesion {
         this.datos.nombre = limpiarNombre(texto);
         return this.confirmar();
       }
-      if (niega) { this.ir("nombre"); return [{ tipo: "texto", texto: "Escribe el *nombre completo* de la persona que irá a la cita." }]; }
+      if (niega) { this.ir("nombre"); return [{ tipo: "texto", texto: "Escriba el *nombre completo* de la persona que irá a la cita." }]; }
     }
     if (this.medico && paso === "confirmar" && afirma) return this.crear();
     if (this.medico && paso === "cabecera" && afirma) return this.iniciarAgenda();
     if (paso === "cabecera" && niega) return this.medicosDeEspecialidad(ESPECIALIDADES.findIndex((x) => x.nombre === this.datos.especialidad));
     if (paso === "cabecera" && especialidadEnTexto(texto)) return this.buscarEspecialidad(texto);
     if (this.medico && paso === "cancelar" && afirma) return this.cancelar();
-    if (this.medico && paso === "cancelar" && niega) return this.menu("Perfecto, tu cita sigue en pie. ¿Te ayudo con algo más?");
+    if (this.medico && paso === "cancelar" && niega) return this.menu("Perfecto, su cita sigue en pie. ¿Le ayudo con algo más?");
 
     const ip = await this.interpretar(texto);
 
@@ -513,7 +513,7 @@ class Sesion {
       return this.iniciarAgenda(ip, true);
     }
     if (paso === "consulta") return this.responder(ip);
-    return this.repetir("No te entendí bien 🙏");
+    return this.repetir("Disculpe, no le entendí bien 🙏");
   }
 
   async interpretar(texto: string): Promise<Interpretacion> {
@@ -536,12 +536,12 @@ class Sesion {
   /** Vuelve a mostrar lo que se esperaba en el paso actual. */
   async repetir(prefijo?: string): Promise<Salida[]> {
     const p = this.conv.paso;
-    const pre: Salida[] = prefijo ? [{ tipo: "texto", texto: `${prefijo} Puedes usar las opciones o escribir *menú* para empezar de nuevo.` }] : [];
+    const pre: Salida[] = prefijo ? [{ tipo: "texto", texto: `${prefijo} Puede usar las opciones o escribir *menú* para empezar de nuevo.` }] : [];
     if (p === "servicio") return [...pre, ...(await this.iniciarAgenda())];
     if (p === "dia") return [...pre, ...(await this.mostrarDias())];
     if (p === "hora") return [...pre, ...(await this.mostrarHoras())];
     if (p === "confirmar") return [...pre, ...this.confirmar()];
-    return [...pre, ...this.menu("¿En qué te ayudo?")];
+    return [...pre, ...this.menu("¿En qué le puedo ayudar?")];
   }
 
   // ----- Agendar -----
@@ -575,7 +575,7 @@ class Sesion {
     if (this.datos.servicio == null) {
       this.ir("servicio");
       return [{
-        tipo: "lista", texto: "¿Qué servicio necesitas?", boton: "Ver servicios",
+        tipo: "lista", texto: "¿Qué servicio necesita?", boton: "Ver servicios",
         secciones: [{
           titulo: "Servicios", filas: servicios.slice(0, 10).map((s, i) => ({
             id: `srv:${i}`, titulo: corto(s.nombre, 24),
@@ -626,7 +626,7 @@ class Sesion {
     if (dias.length > 7) filas.push({ id: `dia:mas:${sumarDias(dias[6].fecha, 1)}`, titulo: "Ver más fechas", descripcion: "Siguientes días con espacio" });
     this.ir("dia");
     return [...pre, {
-      tipo: "lista", texto: `*${serv.nombre}*${serv.duracion ? ` (${serv.duracion})` : ""}\n¿Qué día te queda mejor?`,
+      tipo: "lista", texto: `*${serv.nombre}*${serv.duracion ? ` (${serv.duracion})` : ""}\n¿Qué día le queda mejor?`,
       boton: "Ver días", secciones: [{ titulo: "Días disponibles", filas }],
     }];
   }
@@ -638,7 +638,7 @@ class Sesion {
     const [ocupado, feriados] = [await this.ocupado(), await this.d.almacen.feriados()];
     let libres = horariosDelDia(m, fecha, dur, ocupado, rangosLibres(m, feriados, Number(fecha.slice(0, 4))), this.d.ahora);
     if (!libres.length) {
-      return [{ tipo: "texto", texto: "Ese día ya se llenó. Elige otro, por favor:" }, ...(await this.mostrarDias())];
+      return [{ tipo: "texto", texto: "Ese día ya se llenó. Elija otro, por favor:" }, ...(await this.mostrarDias())];
     }
     const pre: Salida[] = [];
     // Preferencias que entendió la IA ("a las 10", "en la tarde").
@@ -694,7 +694,7 @@ class Sesion {
       }];
     }
     this.ir("nombre");
-    return [{ tipo: "texto", texto: "¿A nombre de quién agendo la cita? Escribe *nombre y apellido*." }];
+    return [{ tipo: "texto", texto: "¿A nombre de quién agendo la cita? Escriba *nombre y apellido*." }];
   }
 
   resumen(): string {
@@ -711,7 +711,7 @@ class Sesion {
   confirmar(): Salida[] {
     if (!this.servicioElegido() || !this.datos.hora || !this.datos.nombre) return this.menu();
     this.ir("confirmar");
-    const titulo = this.datos.citaId ? "Así quedaría tu cita *reagendada*:" : "Revisa tu cita:";
+    const titulo = this.datos.citaId ? "Así quedaría su cita *reagendada*:" : "Revise su cita:";
     return [{
       tipo: "botones", texto: `${titulo}\n\n${this.resumen()}`,
       botones: [{ id: "conf:si", titulo: "Confirmar" }, { id: "conf:hora", titulo: "Cambiar horario" }, { id: "conf:no", titulo: "Cancelar" }],
@@ -726,7 +726,7 @@ class Sesion {
     const libres = horariosDelDia(m, fecha, dur, await this.ocupado(), rangosLibres(m, await a.feriados(), Number(fecha.slice(0, 4))), this.d.ahora);
     if (!libres.some((t) => t.getTime() === inicio.getTime())) {
       this.datos.dia = fecha;
-      return [{ tipo: "texto", texto: "Uy, ese horario se acaba de ocupar. Elige otro, por favor:" }, ...(await this.mostrarHoras())];
+      return [{ tipo: "texto", texto: "Disculpe, ese horario se acaba de ocupar. Elija otro, por favor:" }, ...(await this.mostrarHoras())];
     }
     let pac = await a.paciente(this.e.telefono);
     if (!pac) pac = await a.guardarPaciente(this.e.telefono, this.datos.nombre);
@@ -740,7 +740,7 @@ class Sesion {
     });
     if (res === "ocupado") {
       this.datos.dia = fecha;
-      return [{ tipo: "texto", texto: "Uy, ese horario se acaba de ocupar. Elige otro, por favor:" }, ...(await this.mostrarHoras())];
+      return [{ tipo: "texto", texto: "Disculpe, ese horario se acaba de ocupar. Elija otro, por favor:" }, ...(await this.mostrarHoras())];
     }
     const resumen = this.resumen();
     const reagendada = !!this.datos.citaId;
@@ -755,7 +755,7 @@ class Sesion {
     const mapa = m.ubicacion_gps ? `\n🗺️ ${m.ubicacion_gps}` : "";
     return [{
       tipo: "texto",
-      texto: `✅ ¡Listo! Tu cita quedó ${reagendada ? "reagendada" : "agendada"}:\n\n${resumen}${mapa}\n\nTe enviaré un recordatorio el día anterior por la tarde. Si necesitas cambiarla o cancelarla, escribe *mis citas*.`,
+      texto: `✅ ¡Listo! Su cita quedó ${reagendada ? "reagendada" : "agendada"}:\n\n${resumen}${mapa}\n\nLe enviaré un recordatorio el día anterior por la tarde. Si necesita cambiarla o cancelarla, escriba *mis citas*.`,
     }];
   }
 
@@ -764,7 +764,7 @@ class Sesion {
     const pac = await this.d.almacen.paciente(this.e.telefono);
     const citas = pac ? await this.d.almacen.citasFuturas(pac.id, this.medico!.id, this.d.ahora) : [];
     if (!citas.length) {
-      return this.menu(`No tienes citas próximas con ${nombreMedico(this.medico!)}. ¿Quieres agendar una?`);
+      return this.menu(`No tiene citas próximas con ${nombreMedico(this.medico!)}. ¿Desea agendar una?`);
     }
     if (citas.length === 1 && (intencion === "reagendar" || intencion === "cancelar")) {
       this.datos.citaId = citas[0].id;
@@ -772,7 +772,7 @@ class Sesion {
     }
     this.ir("mis_citas", {});
     return [{
-      tipo: "lista", texto: citas.length === 1 ? "Esta es tu próxima cita:" : "Estas son tus próximas citas:", boton: "Ver citas",
+      tipo: "lista", texto: citas.length === 1 ? "Esta es su próxima cita:" : "Estas son sus próximas citas:", boton: "Ver citas",
       secciones: [{
         titulo: "Próximas citas", filas: citas.slice(0, 10).map((c) => ({
           id: `cita:${c.id}`, titulo: corto(`${fechaCorta(fechaLocal(new Date(c.inicio)))} · ${hora12(new Date(c.inicio))}`, 24),
@@ -791,14 +791,14 @@ class Sesion {
 
   async accionesCita(id: string): Promise<Salida[]> {
     const c = await this.citaPropia(id);
-    if (!c) return this.medico ? this.menu("Esa cita ya no está disponible. ¿En qué te ayudo?") : this.inicio();
+    if (!c) return this.medico ? this.menu("Esa cita ya no está disponible. ¿En qué le puedo ayudar?") : this.inicio();
     if (!this.medico || this.medico.id !== c.medico_id) this.medico = await this.d.almacen.medicoPorId(c.medico_id);
     if (!this.medico) return this.inicio();
     this.ir("cita", { citaId: c.id });
     const i = new Date(c.inicio);
     return [{
       tipo: "botones",
-      texto: `Tu cita con ${conArticuloNegrita(this.medico)}:\n\n📅 ${fechaLarga(fechaLocal(i))}, ${hora12(i)}\n🩺 ${c.servicio}${c.nombre_paciente ? `\n👤 ${c.nombre_paciente}` : ""}\n\n¿Qué quieres hacer?`,
+      texto: `Su cita con ${conArticuloNegrita(this.medico)}:\n\n📅 ${fechaLarga(fechaLocal(i))}, ${hora12(i)}\n🩺 ${c.servicio}${c.nombre_paciente ? `\n👤 ${c.nombre_paciente}` : ""}\n\n¿Qué desea hacer?`,
       botones: [{ id: "acc:reagendar", titulo: "Reagendar" }, { id: "acc:cancelar", titulo: "Cancelar cita" }, { id: "acc:volver", titulo: "Volver" }],
     }];
   }
@@ -818,28 +818,28 @@ class Sesion {
     this.ir("cancelar", { citaId: c.id });
     const i = new Date(c.inicio);
     return [{
-      tipo: "botones", texto: `¿Seguro que quieres cancelar tu cita del *${fechaLarga(fechaLocal(i)).toLowerCase()}, ${hora12(i)}*?`,
+      tipo: "botones", texto: `¿Está seguro de cancelar su cita del *${fechaLarga(fechaLocal(i)).toLowerCase()}, ${hora12(i)}*?`,
       botones: [{ id: "canc:si", titulo: "Sí, cancelar" }, { id: "canc:no", titulo: "No, mantenerla" }],
     }];
   }
 
   async cancelar(): Promise<Salida[]> {
     const c = this.datos.citaId ? await this.citaPropia(this.datos.citaId) : null;
-    if (!c) return this.menu("Esa cita ya no está disponible. ¿En qué te ayudo?");
+    if (!c) return this.menu("Esa cita ya no está disponible. ¿En qué le puedo ayudar?");
     await this.d.almacen.cancelarCita(c.id, "paciente");
     await this.d.avisos.citaCancelada(this.medico!, c, this.e.telefono);
-    return this.menu("Tu cita quedó *cancelada*. Ya le avisé al consultorio. ¿Quieres agendar otra?");
+    return this.menu("Su cita quedó *cancelada*. Ya le avisé al consultorio. ¿Desea agendar otra?");
   }
 
   // ----- Respuesta al recordatorio -----
   async respuestaRecordatorio(accion: string, citaId: string): Promise<Salida[]> {
     const c = await this.d.almacen.cita(citaId);
     const pac = await this.d.almacen.paciente(this.e.telefono);
-    if (!c || !pac || c.paciente_id !== pac.id) return this.medico ? this.menu("No encontré esa cita. ¿En qué te ayudo?") : this.inicio();
+    if (!c || !pac || c.paciente_id !== pac.id) return this.medico ? this.menu("No encontré esa cita. ¿En qué le puedo ayudar?") : this.inicio();
     const m = await this.d.almacen.medicoPorId(c.medico_id);
     if (!m) return this.inicio();
     this.medico = m;
-    if (c.estado !== "confirmada" || new Date(c.inicio) < this.d.ahora) return this.menu("Esa cita ya no está activa. ¿En qué te ayudo?");
+    if (c.estado !== "confirmada" || new Date(c.inicio) < this.d.ahora) return this.menu("Esa cita ya no está activa. ¿En qué le puedo ayudar?");
     this.conv.datos = { citaId: c.id };
     if (accion === "cambiar") return this.reagendar();
     if (accion === "cancelar") return this.preguntarCancelar();
@@ -849,7 +849,7 @@ class Sesion {
     const lugar = [m.consultorio, m.direccion].filter(Boolean).join(", ");
     return [{
       tipo: "texto",
-      texto: `¡Gracias por confirmar! 🙌 Te esperamos el *${fechaLarga(fechaLocal(i)).toLowerCase()} a las ${hora12(i)}*${lugar ? `
+      texto: `¡Gracias por confirmar! 🙌 Le esperamos el *${fechaLarga(fechaLocal(i)).toLowerCase()} a las ${hora12(i)}*${lugar ? `
 
 📍 ${lugar}` : ""}${m.ubicacion_gps ? `
 🗺️ ${m.ubicacion_gps}` : ""}`,
@@ -863,7 +863,7 @@ class Sesion {
     if (ip.respuesta && ip.puede_responder !== false) {
       return [{ tipo: "botones", texto: ip.respuesta, botones }];
     }
-    return [{ tipo: "texto", texto: "Esa pregunta es mejor que te la responda el consultorio directamente." }, ...this.contacto()];
+    return [{ tipo: "texto", texto: "Esa pregunta es mejor que se la responda el consultorio directamente." }, ...this.contacto()];
   }
 
   contacto(): Salida[] {
@@ -877,7 +877,7 @@ class Sesion {
       m.telefono_consultorio ? `📞 Teléfono: ${m.telefono_consultorio}` : "",
     ].filter(Boolean);
     this.ir("menu", {});
-    return [{ tipo: "botones", texto: lineas.length ? `Puedes comunicarte con el consultorio aquí:\n\n${lineas.join("\n")}` : "Por ahora no tengo otro contacto del consultorio.", botones: BOTONES_MENU }];
+    return [{ tipo: "botones", texto: lineas.length ? `Puede comunicarse con el consultorio aquí:\n\n${lineas.join("\n")}` : "Por ahora no tengo otro contacto del consultorio.", botones: BOTONES_MENU }];
   }
 
   // ----- Buscar médico -----
@@ -886,7 +886,7 @@ class Sesion {
     if (!lista.length) {
       return [{
         tipo: "botones",
-        texto: "No encontré a ese médico en Aidú Med. Revisa el nombre o pide al consultorio su *código* (por ejemplo: IB24) y escríbelo aquí.",
+        texto: "No encontré a ese médico en Aidú Med. Revise el nombre o pida al consultorio su *código* (por ejemplo: IB24) y escríbalo aquí.",
         botones: [{ id: "ini:medico", titulo: "Soy médico" }],
       }];
     }
@@ -895,7 +895,7 @@ class Sesion {
       return this.saludo();
     }
     return [{
-      tipo: "lista", texto: "Encontré estos médicos. ¿Cuál es el tuyo?", boton: "Ver médicos",
+      tipo: "lista", texto: "Encontré estos médicos. ¿Cuál es el suyo?", boton: "Ver médicos",
       secciones: [{
         titulo: "Médicos", filas: lista.slice(0, 10).map((m) => ({
           id: `med:${m.id}`, titulo: corto(nombreMedico(m), 24), descripcion: corto([especialidad(m), m.consultorio].filter(Boolean).join(" · "), 72),

@@ -137,9 +137,7 @@ async function recordatorios(): Promise<Response> {
     const tel = fila.pacientes?.telefono as string;
     if (!tel || esSimulado(tel)) continue;
     if (!whatsappListo()) { pendientes++; continue; }
-    const carga = recordatorio(tel, fila as Cita, fila.medicos as Medico);
-    const id = await enviar(tel, carga);
-    await almacen.registrar(tel, "saliente", carga, id, fila.medico_id);
+    const id = await enviarPlantilla(tel, recordatorio(tel, fila as Cita, fila.medicos as Medico), fila.medico_id);
     if (id) {
       enviados++;
       await sb.from("citas").update({ recordatorio_at: new Date().toISOString() }).eq("id", fila.id);
@@ -161,10 +159,18 @@ async function evento(req: Request): Promise<Response> {
   const r = await sb.from("citas").select("*, pacientes(telefono), medicos(*)").eq("id", cita_id).maybeSingle();
   const tel = r.data?.pacientes?.telefono as string | undefined;
   if (!r.data || !tel || esSimulado(tel) || !whatsappListo()) return new Response("Sin envío");
-  const carga = canceladaPorConsultorio(tel, r.data as Cita, r.data.medicos as Medico);
-  const id = await enviar(tel, carga);
-  await almacen.registrar(tel, "saliente", carga, id, r.data.medico_id);
+  const id = await enviarPlantilla(tel, canceladaPorConsultorio(tel, r.data as Cita, r.data.medicos as Medico), r.data.medico_id);
   return new Response(id ? "Enviado" : "Error al enviar");
+}
+
+/** Envía la primera plantilla que Meta acepte (v2 de usted; si aún no está aprobada, la v1). */
+async function enviarPlantilla(tel: string, opciones: Record<string, unknown>[], medicoId?: string | null): Promise<string | null> {
+  for (const carga of opciones) {
+    const id = await enviar(tel, carga);
+    if (id) { await almacen.registrar(tel, "saliente", carga, id, medicoId); return id; }
+  }
+  await almacen.registrar(tel, "saliente", opciones[opciones.length - 1], null, medicoId);
+  return null;
 }
 
 // ---------- Panel del médico ----------
@@ -215,9 +221,8 @@ async function panel(req: Request): Promise<Response> {
     const ult = await sb.from("mensajes").select("creado_at").eq("telefono", tel).eq("direccion", "entrante")
       .gte("creado_at", new Date(Date.now() - 23.5 * 3600_000).toISOString()).limit(1);
     const enVentana = !!ult.data?.length;
-    const carga = enVentana ? cargaUtil(tel, { tipo: "texto", texto: turnoListoTexto(r.data as Cita, m) }) : turnoListo(tel, r.data as Cita, m);
-    const id = await enviar(tel, carga);
-    await almacen.registrar(tel, "saliente", carga, id, uid);
+    const opciones = enVentana ? [cargaUtil(tel, { tipo: "texto", texto: turnoListoTexto(r.data as Cita, m) })] : turnoListo(tel, r.data as Cita, m);
+    const id = await enviarPlantilla(tel, opciones, uid);
     if (!id) return json(req, { error: "WhatsApp no aceptó el mensaje. Intente de nuevo en un momento." }, 502);
     await sb.from("citas").update({ llamado_at: ahora }).eq("id", r.data.id);
     return json(req, { ok: true, via: enVentana ? "texto" : "plantilla", llamado_at: ahora });
@@ -417,6 +422,41 @@ const PLANTILLAS = [
       },
       { type: "FOOTER", text: "Aidú Med · Asistente de citas" },
       { type: "BUTTONS", buttons: [{ type: "QUICK_REPLY", text: "Elegir otra fecha" }] },
+    ],
+  },
+  {
+    name: "recordatorio_cita_v2", language: "es", category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text: "Hola, {{1}}. Le recordamos su cita con {{2}} el *{{3}}* a las *{{4}}*.\n\nLugar: {{5}}.\n\n¿Nos confirma su asistencia?",
+        example: { body_text: [["María", "Dr. Luis Espinoza", "martes 11 de noviembre", "10:00 a. m.", "Consultorio 204 · Clínica Sonrisa, Barrio El Centro, San Pedro Sula"]] },
+      },
+      { type: "FOOTER", text: "Aidú Med · Asistente de citas" },
+      { type: "BUTTONS", buttons: [{ type: "QUICK_REPLY", text: "Confirmo" }, { type: "QUICK_REPLY", text: "Cambiar fecha" }, { type: "QUICK_REPLY", text: "Cancelar cita" }] },
+    ],
+  },
+  {
+    name: "cita_cancelada_v2", language: "es", category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text: "Hola, {{1}}. Le escribimos del consultorio {{2}}.\n\nPor motivos fuera de nuestro control, necesitamos reprogramar su cita del *{{3}}* a las *{{4}}*.\n\nLamentamos las molestias que esto pueda causarle.\n\n¿Desea elegir otra fecha?",
+        example: { body_text: [["María", "del Dr. Luis Espinoza", "jueves 12 de noviembre", "4:30 p. m."]] },
+      },
+      { type: "FOOTER", text: "Aidú Med · Asistente de citas" },
+      { type: "BUTTONS", buttons: [{ type: "QUICK_REPLY", text: "Elegir otra fecha" }] },
+    ],
+  },
+  {
+    name: "turno_listo_v2", language: "es", category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text: "Hola, {{1}}. {{2}} ya puede atenderle.\n\nPor favor, diríjase a: *{{3}}*. ¡Le esperamos!",
+        example: { body_text: [["María", "El Dr. Luis Espinoza", "Consultorio 204"]] },
+      },
+      { type: "FOOTER", text: "Aidú Med · Asistente de citas" },
     ],
   },
   {
