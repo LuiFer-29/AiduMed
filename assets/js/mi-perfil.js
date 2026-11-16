@@ -8,10 +8,22 @@
 
   var p = null;
   try { p = await App.miPerfil(sesion.user.id); } catch (e) { console.error(e); }
-  if (!p) { location.replace('/registro'); return; }
 
   var URL_PANEL = window.AIDU_SB.url + '/functions/v1/asistente/panel';
+  // Asistente o secretaria: no tiene perfil de médico; maneja «Mis citas» de los médicos que le dieron acceso.
+  var asistente = null;
+  if (!p) {
+    try { asistente = await panel({ accion: 'asistente_inicio' }); } catch (e) { console.error(e); }
+    if (!asistente || !asistente.medicos || !asistente.medicos.length) { location.replace('/registro'); return; }
+    var guardado = null;
+    try { guardado = localStorage.getItem('aidu-medico-asistido'); } catch (e) { /* sin almacenamiento */ }
+    p = asistente.medicos.find(function (m) { return m.id === guardado; }) || asistente.medicos[0];
+    document.body.classList.add('modo-asistente');
+    document.title = 'Agenda · Aidú Med';
+  }
+
   async function panel(cuerpo) {
+    if (asistente && p) cuerpo.medico_id = p.id;
     var s = (await App.sb.auth.getSession()).data.session;
     var res = await fetch(URL_PANEL, {
       method: 'POST',
@@ -39,6 +51,7 @@
   // ---------- Menú: Mis citas / Configuración ----------
   function mostrarSeccion(s) {
     if (!conCitas) s = 'configuracion';
+    if (asistente) s = 'citas';
     $('vista-citas').hidden = s !== 'citas';
     $('vista-configuracion').hidden = s !== 'configuracion';
     document.querySelectorAll('.panel-menu [data-seccion]').forEach(function (a) {
@@ -76,6 +89,29 @@
       $('nota-admin').hidden = false;
     }
     $('foto').innerHTML = p.foto_path ? '<img src="' + esc(urlFoto(p.foto_path)) + '" alt="">' : ICONO_PERSONA;
+    if (asistente) {
+      // La asistente ve de quién es la agenda; si maneja varias, elige el médico aquí.
+      var nombreDr = [p.titulo, p.nombre].filter(Boolean).join(' ');
+      $('estado').textContent = 'Acceso de asistente';
+      $('estado').className = 'estado estado-azul';
+      $('estado-texto').innerHTML = 'Hola, ' + esc(String(asistente.nombre || '').split(' ')[0]) + '. Está manejando la agenda de <strong>' + esc(nombreDr) + '</strong>.';
+      $('editar').hidden = true; $('nota-admin').hidden = true;
+      if (asistente.medicos.length > 1 && !$('selector-medico')) {
+        var lab = document.createElement('label'); lab.className = 'selector-medico';
+        lab.innerHTML = 'Cambiar de agenda<select id="selector-medico">' + asistente.medicos.map(function (m) {
+          return '<option value="' + esc(m.id) + '">' + esc([m.titulo, m.nombre].filter(Boolean).join(' ')) + '</option>';
+        }).join('') + '</select>';
+        $('estado-texto').after(lab);
+        $('selector-medico').addEventListener('change', function () {
+          p = asistente.medicos.find(function (m) { return m.id === this.value; }, this) || p;
+          try { localStorage.setItem('aidu-medico-asistido', p.id); } catch (e) { /* sin almacenamiento */ }
+          pintarEncabezado();
+          $('lista-citas').innerHTML = '<p class="ayuda">Cargando citas…</p>';
+          cargarCitas();
+        });
+      }
+      if ($('selector-medico')) $('selector-medico').value = p.id;
+    }
   }
   pintarEncabezado();
   // Mientras el registro no se ha enviado, los "Editar" de cada tarjeta llevan al registro completo.
@@ -83,13 +119,79 @@
     document.querySelectorAll('.editar-enlace').forEach(function (a) { a.hidden = true; });
   }
 
-  // ---------- Servicios ----------
-  var servicios = p.servicios || [];
-  $('servicios').innerHTML = servicios.length ? servicios.map(function (s) {
-    return '<li><span class="srv-nombre">' + esc(s.nombre) + '</span>' +
-      '<span class="srv-duracion"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' + esc(s.duracion || '') + '</span>' +
-      '<span class="srv-precio">' + (s.precio ? 'L ' + App.miles(s.precio) : '<span class="ayuda">Sin precio</span>') + '</span></li>';
-  }).join('') : '<li class="vacio-lista">Todavía no ha agregado servicios.</li>';
+  // ---------- Servicios (se editan aquí mismo, sin ir al registro) ----------
+  var ICONO_LAPIZ = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>';
+  var ICONO_BASURA_S = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+  var editandoServicio = -1; // -1: servicio nuevo
+  function pintarServicios() {
+    var servicios = p.servicios || [];
+    $('servicios').innerHTML = servicios.length ? servicios.map(function (s, i) {
+      return '<li><span class="srv-nombre">' + esc(s.nombre) + '</span>' +
+        '<span class="srv-duracion"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' + esc(s.duracion || '') + '</span>' +
+        '<span class="srv-precio">' + (s.precio ? 'L ' + App.miles(s.precio) : '<span class="ayuda">Sin precio</span>') + '</span>' +
+        '<span class="srv-botones"><button type="button" class="lapiz" data-editar-srv="' + i + '" aria-label="Editar ' + esc(s.nombre) + '" title="Editar">' + ICONO_LAPIZ + '</button>' +
+        '<button type="button" class="papelera" data-borrar-srv="' + i + '" aria-label="Eliminar ' + esc(s.nombre) + '" title="Eliminar">' + ICONO_BASURA_S + '</button></span></li>';
+    }).join('') : '<li class="vacio-lista">Todavía no ha agregado servicios.</li>';
+    $('servicios').querySelectorAll('[data-editar-srv]').forEach(function (b) {
+      b.addEventListener('click', function () { abrirServicio(+b.dataset.editarSrv); });
+    });
+    $('servicios').querySelectorAll('[data-borrar-srv]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var i = +b.dataset.borrarSrv, li = b.closest('li'), nombre = servicios[i].nombre;
+        li.classList.add('confirmando');
+        if (servicios.length === 1) {
+          li.innerHTML = '<span class="srv-nombre">Debe tener al menos un servicio. Agregue otro antes de eliminar «' + esc(nombre) + '».</span><span class="srv-botones"><button type="button" class="mini" data-no>Entendido</button></span>';
+        } else {
+          li.innerHTML = '<span class="srv-nombre">¿Eliminar «' + esc(nombre) + '»? El asistente dejará de ofrecerlo. Las citas ya agendadas no cambian.</span><span class="srv-botones"><button type="button" class="mini peligro" data-si>Sí, eliminar</button><button type="button" class="mini" data-no>No</button></span>';
+          li.querySelector('[data-si]').addEventListener('click', async function () {
+            this.disabled = true;
+            if (await guardarServicios(servicios.filter(function (_, j) { return j !== i; }))) cerrarServicio();
+            else pintarServicios();
+          });
+        }
+        li.querySelector('[data-no]').addEventListener('click', pintarServicios);
+        li.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      });
+    });
+  }
+  async function guardarServicios(lista) {
+    var r = await App.sb.from('medicos').update({ servicios: lista }).eq('id', p.id).select().single();
+    if (r.error) { alert('No se pudo guardar: ' + App.traducirError(r.error)); return false; }
+    p = r.data; pintarServicios(); return true;
+  }
+  function abrirServicio(i) {
+    var s = i >= 0 ? (p.servicios || [])[i] : null;
+    editandoServicio = s ? i : -1;
+    $('form-servicio').reset(); $('fs-error').hidden = true;
+    $('fs-titulo').textContent = s ? 'Editar servicio' : 'Nuevo servicio';
+    $('fs-guardar').textContent = s ? 'Guardar cambios' : 'Guardar servicio';
+    if (s) { $('fs-nombre').value = s.nombre || ''; $('fs-duracion').value = s.duracion || '30 min'; $('fs-precio').value = App.miles(s.precio); }
+    $('form-servicio').hidden = false; $('abrir-servicio').hidden = true;
+    $('form-servicio').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    $('fs-nombre').focus();
+  }
+  function cerrarServicio() { $('form-servicio').reset(); $('form-servicio').hidden = true; $('abrir-servicio').hidden = false; editandoServicio = -1; }
+  $('abrir-servicio').addEventListener('click', function () { abrirServicio(-1); });
+  $('fs-cancelar').addEventListener('click', cerrarServicio);
+  $('fs-precio').addEventListener('input', function () { this.value = App.miles(this.value); });
+  $('form-servicio').addEventListener('submit', async function (ev) {
+    ev.preventDefault();
+    var err = function (t) { $('fs-error').textContent = t; $('fs-error').hidden = false; };
+    var nombre = $('fs-nombre').value.trim().replace(/\s+/g, ' ');
+    var precio = $('fs-precio').value.replace(/\D/g, '') || null;
+    if (nombre.length < 2) return err('Escriba el nombre del servicio.');
+    var lista = (p.servicios || []).slice();
+    var repetido = lista.some(function (x, j) { return j !== editandoServicio && String(x.nombre).toLowerCase() === nombre.toLowerCase(); });
+    if (repetido) return err('Ya tiene un servicio con ese nombre.');
+    $('fs-error').hidden = true;
+    var nuevo = { nombre: nombre, duracion: $('fs-duracion').value, precio: precio };
+    if (editandoServicio >= 0) lista[editandoServicio] = nuevo; else lista.push(nuevo);
+    var b = $('fs-guardar'), texto = b.textContent; b.disabled = true; b.textContent = 'Guardando…';
+    var ok = await guardarServicios(lista);
+    b.disabled = false; b.textContent = texto;
+    if (ok) cerrarServicio();
+  });
+  pintarServicios();
 
   // ---------- Horario ----------
   var dias = [['Lunes', 'Lun'], ['Martes', 'Mar'], ['Miércoles', 'Mié'], ['Jueves', 'Jue'], ['Viernes', 'Vie'], ['Sábado', 'Sáb'], ['Domingo', 'Dom']];
@@ -197,11 +299,16 @@
 
   // ---------- Consultorio ----------
   var mapa = p.ubicacion_gps ? '<a href="' + esc(p.ubicacion_gps) + '" target="_blank" rel="noopener">Ver en el mapa</a>' : '<span class="ayuda">Sin ubicación en el mapa</span>';
+  function pintarConsultorio(deriva) {
   $('consultorio').innerHTML = dato('Nombre', esc(p.consultorio)) +
     dato('Número de consultorio', p.numero_consultorio ? esc(p.numero_consultorio) : '<span class="ayuda">Sin número. Agréguelo en «Editar» para que el botón «Atender» le diga al paciente a dónde pasar.</span>') +
     dato('Dirección', esc(p.direccion) + '<br>' + mapa) +
     dato('WhatsApp', esc(p.whatsapp_consultorio)) + dato('Teléfono', esc(p.telefono_consultorio)) +
-    dato('Consultas que el asistente no resuelve', esc(p.derivar_a === 'Otro número' ? 'Van al ' + (p.whatsapp_secretaria || '') : (p.derivar_a ? 'Van al WhatsApp del consultorio' : '')));
+    dato('Consultas que el asistente no resuelve', deriva ? 'Van a su asistente, ' + esc(deriva.nombre) + ' (' + esc(telBonito(deriva.whatsapp)) + ')'
+      : esc(p.derivar_a === 'Otro número' ? 'Van al ' + (p.whatsapp_secretaria || '') : (p.derivar_a ? 'Van al WhatsApp del consultorio' : '')));
+  }
+  var telBonito = function (t) { t = String(t || '').replace(/\D/g, ''); return t.length === 8 ? t.slice(0, 4) + '-' + t.slice(4) : t; };
+  pintarConsultorio(null);
 
   // ---------- Profesional ----------
   $('profesional').innerHTML = dato('Colegiación', esc(p.colegiacion)) + dato('Correo', esc(p.correo || sesion.user.email)) + dato('Descripción', esc(p.descripcion));
@@ -211,6 +318,100 @@
   $('plan').innerHTML = p.plan && precios[p.plan]
     ? '<strong>' + esc(p.plan) + '</strong><span>' + precios[p.plan] + '</span>' + (aprobado ? '' : '<span class="ayuda">No cobramos nada hasta aprobar su registro.</span>')
     : '<span class="ayuda">Aún no ha elegido un plan.</span>';
+
+  // ---------- Acceso para su asistente (plan Profesional) ----------
+  var PLANES_PRO = ['Profesional', 'Piloto fundador'];
+  var asistentes = [];
+  function haceCuanto(iso) {
+    if (!iso) return '';
+    var d = new Date(iso), dia = diaLocal(d), hoy = diaLocal(new Date()), ayer = diaLocal(new Date(Date.now() - 86400000));
+    var horaTxt = new Intl.DateTimeFormat('es-HN', { timeZone: TZ, hour: 'numeric', minute: '2-digit', hour12: true }).format(d).replace(/\s*a\.?\s*m\.?/i, ' a. m.').replace(/\s*p\.?\s*m\.?/i, ' p. m.');
+    if (dia === hoy) return 'hoy, ' + horaTxt;
+    if (dia === ayer) return 'ayer, ' + horaTxt;
+    return new Intl.DateTimeFormat('es-HN', { timeZone: TZ, day: 'numeric', month: 'long' }).format(d);
+  }
+  function pintarAsistentes() {
+    var deriva = asistentes.find(function (a) { return a.recibe_derivaciones; });
+    pintarConsultorio(deriva || null);
+    var lista = asistentes.length ? '<ul class="lista-asistentes">' + asistentes.map(function (a) {
+      var inicial = esc((a.nombre || '?').trim().charAt(0).toUpperCase());
+      var est = a.estado === 'activa' ? '<span class="estado estado-verde">Activa</span>' : '<span class="estado estado-ambar">Invitación enviada</span>';
+      var acceso = a.ultimo_acceso ? 'Último acceso: ' + esc(haceCuanto(a.ultimo_acceso)) : 'Todavía no ha entrado';
+      return '<li data-asistente="' + esc(a.id) + '"><span class="asistente-inicial" aria-hidden="true">' + inicial + '</span>' +
+        '<span class="asistente-datos"><strong>' + esc(a.nombre) + '</strong><span>' + esc(a.correo) + ' · WhatsApp ' + esc(telBonito(a.whatsapp)) + '</span></span>' + est +
+        '<div class="asistente-pie"><span>' + acceso + '</span>' +
+          '<label class="casilla-linea"><input type="checkbox" data-deriva' + (a.recibe_derivaciones ? ' checked' : '') + '><span>Le llegan las consultas que el asistente de WhatsApp no resuelve</span></label>' +
+          '<span class="acciones-cita">' + (a.estado !== 'activa' ? '<button type="button" class="mini" data-reenviar>Reenviar invitación</button>' : '') +
+          '<button type="button" class="mini peligro" data-quitar>Quitar acceso</button></span></div></li>';
+    }).join('') + '</ul>' : '';
+    var puedeAgregar = asistentes.length < 2;
+    $('asistentes-cuerpo').innerHTML = lista + (puedeAgregar && $('form-asistente').hidden
+      ? '<button type="button" class="boton-agregar-fecha" id="abrir-asistente">+ ' + (asistentes.length ? 'Agregar otra asistente' : 'Dar acceso a su asistente') + '</button>'
+      : (!puedeAgregar ? '<p class="ayuda limite-asistentes">Puede tener hasta 2 asistentes. Para agregar otra, quite el acceso a una.</p>' : ''));
+    if ($('abrir-asistente')) $('abrir-asistente').addEventListener('click', function () {
+      $('form-asistente').reset(); $('as-error').hidden = true; avisar('as-msg', 'ok', '');
+      $('as-recibe').checked = !asistentes.some(function (a) { return a.recibe_derivaciones; });
+      $('form-asistente').hidden = false; pintarAsistentes(); $('as-nombre').focus();
+    });
+    $('asistentes-cuerpo').querySelectorAll('[data-asistente]').forEach(function (li) {
+      var id = li.dataset.asistente, a = asistentes.find(function (x) { return x.id === id; });
+      li.querySelector('[data-deriva]').addEventListener('change', async function () {
+        var cb = this; cb.disabled = true;
+        try { asistentes = (await panel({ accion: 'derivar_asistente', id: id, recibe_derivaciones: cb.checked })).asistentes; pintarAsistentes(); }
+        catch (e) { cb.checked = !cb.checked; cb.disabled = false; alert('No se pudo guardar: ' + e.message); }
+      });
+      var re = li.querySelector('[data-reenviar]');
+      if (re) re.addEventListener('click', async function () {
+        re.disabled = true; re.textContent = 'Enviando…';
+        try { asistentes = (await panel({ accion: 'reenviar_asistente', id: id })).asistentes; pintarAsistentes(); avisar('as-msg', 'ok', 'Le reenviamos la invitación a ' + a.correo + '.'); }
+        catch (e) { re.disabled = false; re.textContent = 'Reenviar invitación'; alert('No se pudo reenviar: ' + e.message); }
+      });
+      li.querySelector('[data-quitar]').addEventListener('click', function () {
+        var caja = this.parentNode;
+        caja.innerHTML = '<span class="pregunta-cancelar">¿Quitar el acceso a ' + esc(a.nombre.split(' ')[0]) + '? Ya no podrá entrar a su agenda.</span><button type="button" class="mini peligro" data-si>Sí, quitar</button><button type="button" class="mini" data-no>No</button>';
+        caja.querySelector('[data-no]').addEventListener('click', pintarAsistentes);
+        caja.querySelector('[data-si]').addEventListener('click', async function () {
+          this.disabled = true;
+          try { asistentes = (await panel({ accion: 'quitar_asistente', id: id })).asistentes; pintarAsistentes(); avisar('as-msg', 'ok', 'Listo. ' + a.nombre + ' ya no tiene acceso a su agenda.'); }
+          catch (e) { pintarAsistentes(); alert('No se pudo quitar el acceso: ' + e.message); }
+        });
+      });
+    });
+  }
+  if (!asistente && conCitas) {
+    $('caja-asistentes').hidden = false;
+    if (PLANES_PRO.indexOf(p.plan) < 0) {
+      $('asistentes-cuerpo').innerHTML = '<div class="sin-plan-pro"><span>Esta función es parte del <strong>plan Profesional</strong>. Cámbiese para que su asistente maneje sus citas con su propio acceso.</span><a class="editar-enlace" href="/registro?paso=5">Ver planes</a></div>';
+    } else {
+      $('asistentes-cuerpo').innerHTML = '<p class="ayuda">Cargando…</p>';
+      panel({ accion: 'asistentes' }).then(function (r) { asistentes = r.asistentes || []; pintarAsistentes(); })
+        .catch(function () { $('asistentes-cuerpo').innerHTML = '<p class="mensaje error">No se pudo cargar. Recargue la página.</p>'; });
+      $('as-cancelar').addEventListener('click', function () { $('form-asistente').reset(); $('form-asistente').hidden = true; pintarAsistentes(); });
+      $('as-whatsapp').addEventListener('input', function () {
+        var d = this.value.replace(/\D/g, '').slice(0, 8); this.value = d.length > 4 ? d.slice(0, 4) + '-' + d.slice(4) : d;
+      });
+      $('form-asistente').addEventListener('submit', async function (ev) {
+        ev.preventDefault();
+        var err = function (t) { $('as-error').textContent = t; $('as-error').hidden = false; };
+        var nombre = $('as-nombre').value.trim(), correo = $('as-correo').value.trim(), wa = $('as-whatsapp').value.replace(/\D/g, '');
+        if (nombre.length < 3) return err('Escriba el nombre completo de su asistente.');
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) return err('Revise el correo: no parece válido.');
+        if (wa.length !== 8) return err('Escriba los 8 dígitos del WhatsApp de su asistente.');
+        $('as-error').hidden = true;
+        var b = $('as-enviar'); b.disabled = true; b.textContent = 'Enviando…';
+        try {
+          var r = await panel({ accion: 'invitar_asistente', nombre: nombre, correo: correo, whatsapp: wa, recibe_derivaciones: $('as-recibe').checked });
+          asistentes = r.asistentes || [];
+          $('form-asistente').reset(); $('form-asistente').hidden = true;
+          pintarAsistentes();
+          avisar('as-msg', r.enviado === false ? 'error' : 'ok', r.enviado === false
+            ? 'El acceso quedó creado, pero no pudimos enviar el correo. Use «Reenviar invitación».'
+            : 'Listo. Le enviamos a ' + correo + ' un correo para crear su contraseña y entrar a su agenda.');
+        } catch (e) { err(e.message); }
+        b.disabled = false; b.textContent = 'Enviar invitación';
+      });
+    }
+  }
 
   // ---------- Foto de perfil ----------
   function pintarFoto() {
@@ -402,8 +603,9 @@
 
   async function cargarCitas() {
     var ahora = new Date();
-    var q = App.sb.from('citas').select('id, inicio, fin, servicio, duracion_min, estado, nombre_paciente, cancelada_por, paciente_confirmo_at, llamado_at, pacientes(telefono, nombre)').eq('medico_id', p.id);
-    if (vista === 'proximas') q = q.eq('estado', 'confirmada').gte('fin', ahora.toISOString()).order('inicio').limit(200);
+    var q = App.sb.from('citas').select('id, inicio, fin, servicio, duracion_min, estado, nombre_paciente, cancelada_por, paciente_confirmo_at, llamado_at, llamado_por, marcada_por, cancelada_por_nombre, pacientes(telefono, nombre)').eq('medico_id', p.id);
+    // Próximas: desde el inicio de hoy, para marcar en la misma pantalla si los pacientes de hoy asistieron.
+    if (vista === 'proximas') q = q.in('estado', ['confirmada', 'completada', 'no_asistio']).gte('inicio', new Date(diaLocal(ahora) + 'T00:00:00-06:00').toISOString()).order('inicio').limit(200);
     else q = q.lt('inicio', ahora.toISOString()).gte('inicio', new Date(ahora.getTime() - 60 * 86400000).toISOString()).order('inicio', { ascending: false }).limit(150);
     var r = await q;
     if (r.error) { $('lista-citas').innerHTML = '<p class="mensaje error">No se pudieron cargar sus citas.</p>'; return; }
@@ -419,12 +621,19 @@
     pintarCitas();
   }
 
+  // Cuando lo hizo la asistente, se muestra su nombre (por ejemplo, «Avisado 9:28 a. m. · Carla»).
+  var porQuien = function (n) { return n ? ' · <span class="por-quien">' + esc(String(n).split(' ')[0]) + '</span>' : ''; };
+  var yaEmpezo = function (c) { return new Date(c.inicio) <= new Date(); };
+  // «Asistió» / «No asistió» juntos, como un solo control.
+  var botonesLlegada = function (c) {
+    return '<span class="marcar-llegada" role="group" aria-label="¿El paciente asistió?"><button type="button" data-marcar="completada" data-id="' + c.id + '">Asistió</button>' +
+      '<button type="button" data-marcar="no_asistio" data-id="' + c.id + '">No asistió</button></span>';
+  };
   function estadoCita(c) {
-    if (c.estado === 'cancelada') return '<span class="estado estado-gris">Cancelada' + (c.cancelada_por === 'paciente' ? ' por el paciente' : c.cancelada_por === 'consultorio' ? ' por el consultorio' : '') + '</span>';
-    if (c.estado === 'completada') return '<span class="estado estado-verde">Asistió</span>';
-    if (c.estado === 'no_asistio') return '<span class="estado estado-rojo">No asistió</span>';
-    if (vista === 'anteriores') return '<span class="acciones-cita"><button type="button" class="mini" data-marcar="completada" data-id="' + c.id + '">Asistió</button><button type="button" class="mini" data-marcar="no_asistio" data-id="' + c.id + '">No asistió</button></span>';
-    if (c.llamado_at) return '<span class="estado estado-azul">Avisado ' + esc(horaLocal(new Date(c.llamado_at))) + '</span>';
+    if (c.estado === 'cancelada') return '<span class="estado estado-gris">Cancelada' + (c.cancelada_por === 'paciente' ? ' por el paciente' : c.cancelada_por === 'consultorio' ? ' por el consultorio' : '') + porQuien(c.cancelada_por_nombre) + '</span>';
+    if (c.estado === 'completada') return '<span class="estado estado-verde">Asistió' + porQuien(c.marcada_por) + '</span>';
+    if (c.estado === 'no_asistio') return '<span class="estado estado-rojo">No asistió' + porQuien(c.marcada_por) + '</span>';
+    if (vista === 'anteriores' || yaEmpezo(c) || c.llamado_at) return ''; // «Avisado …» va en su propia línea
     return (c.paciente_confirmo_at ? '<span class="estado estado-verde">Confirmó</span>' : '');
   }
 
@@ -435,20 +644,21 @@
     var nHoy = citas.filter(function (c) { return diaLocal(new Date(c.inicio)) === hoy; }).length;
     if (vista === 'proximas') {
       var semana = citas.filter(function (c) { return new Date(c.inicio) - new Date() < 7 * 86400000; }).length;
-      $('resumen-citas').textContent = citas.length ? 'Hoy: ' + nHoy + (nHoy === 1 ? ' cita' : ' citas') + ' · Próximos 7 días: ' + semana : '';
+      var porMarcar = citas.filter(function (c) { return c.estado === 'confirmada' && yaEmpezo(c); }).length;
+      $('resumen-citas').textContent = citas.length ? 'Hoy: ' + nHoy + (nHoy === 1 ? ' cita' : ' citas') + ' · Próximos 7 días: ' + semana + (porMarcar ? ' · Por marcar si asistieron: ' + porMarcar : '') : '';
       $('menu-hoy').textContent = nHoy; $('menu-hoy').hidden = !nHoy;
       $('menu-hoy').title = nHoy + (nHoy === 1 ? ' cita hoy' : ' citas hoy');
     } else {
       $('resumen-citas').textContent = 'Últimos 60 días. Marque si el paciente asistió para llevar su control.';
     }
-    $('abrir-cerrar-dia').hidden = vista !== 'proximas';
+    $('abrir-cerrar-dia').hidden = vista !== 'proximas' || !!asistente; // cancelar días completos: solo el médico
     var grupos = {}, orden = [];
     citas.forEach(function (c) { var d = diaLocal(new Date(c.inicio)); if (!grupos[d]) { grupos[d] = []; orden.push(d); } grupos[d].push(c); });
     Object.keys(cerrados).forEach(function (d) { if (!grupos[d]) { grupos[d] = []; orden.push(d); } });
     orden.sort(); if (vista === 'anteriores') orden.reverse();
     if (!orden.length) {
       $('lista-citas').innerHTML = '<div class="vacio-citas">' + (vista === 'proximas'
-        ? '<strong>Aún no tiene citas próximas.</strong><span>' + (p.estado === 'activo' ? 'Comparta su enlace con sus pacientes para que empiecen a agendar.' : 'Cuando su asistente esté activo, aquí verá cada cita que agenden sus pacientes.') + '</span>'
+        ? '<strong>' + (asistente ? 'No hay citas próximas.' : 'Aún no tiene citas próximas.') + '</strong><span>' + (asistente ? 'Cuando los pacientes agenden, aquí verá cada cita.' : p.estado === 'activo' ? 'Comparta su enlace con sus pacientes para que empiecen a agendar.' : 'Cuando su asistente esté activo, aquí verá cada cita que agenden sus pacientes.') + '</span>'
         : '<strong>Sin citas en los últimos 60 días.</strong>') + '</div>';
       return;
     }
@@ -456,16 +666,20 @@
       var cerrado = cerrados[d];
       var cab = '<h3>' + esc(fechaTitulo(d)) + '</h3>';
       if (cerrado && !grupos[d].length) return '<div class="dia-citas">' + cab + '<div class="dia-cerrado">' + ICONO_SOL + '<span>' + esc(cerrado) + '</span></div></div>';
-      return '<div class="dia-citas">' + cab + (cerrado ? '<div class="dia-cerrado con-citas">' + ICONO_SOL + '<span>' + esc(cerrado) + ' (todavía tiene citas este día)</span>' + (vista === 'proximas' ? '<button type="button" class="mini peligro" data-cancelar-dia="' + d + '">Cancelar las citas de este día</button>' : '') + '</div>' : '') + '<ul>' + grupos[d].map(function (c) {
+      return '<div class="dia-citas">' + cab + (cerrado ? '<div class="dia-cerrado con-citas">' + ICONO_SOL + '<span>' + esc(cerrado) + ' (todavía tiene citas este día)</span>' + (vista === 'proximas' && !asistente ? '<button type="button" class="mini peligro" data-cancelar-dia="' + d + '">Cancelar las citas de este día</button>' : '') + '</div>' : '') + '<ul>' + grupos[d].map(function (c) {
         var tel = c.pacientes && c.pacientes.telefono, real = tel && !/^sim/.test(tel);
         var deHoy = d === hoy && vista === 'proximas' && c.estado === 'confirmada';
-        return '<li class="cita' + (c.estado === 'cancelada' ? ' cancelada' : '') + '">' +
+        var pendiente = c.estado === 'confirmada' && yaEmpezo(c); // ya es la hora: toca marcar si llegó
+        var marcada = c.estado === 'completada' || c.estado === 'no_asistio';
+        return '<li class="cita' + (c.estado === 'cancelada' ? ' cancelada' : '') + (marcada && vista === 'proximas' ? ' marcada' : '') + '">' +
           '<div class="cita-hora"><strong>' + esc(horaLocal(new Date(c.inicio))) + '</strong><span>' + esc(c.duracion_min) + ' min</span></div>' +
-          '<div class="cita-info"><strong>' + esc(c.nombre_paciente || (c.pacientes && c.pacientes.nombre) || 'Paciente') + '</strong><span>' + esc(c.servicio) + (tel && /^sim/.test(tel) ? ' · <em>prueba</em>' : '') + '</span></div>' +
+          '<div class="cita-info"><strong>' + esc(c.nombre_paciente || (c.pacientes && c.pacientes.nombre) || 'Paciente') + '</strong><span>' + esc(c.servicio) + (tel && /^sim/.test(tel) ? ' · <em>prueba</em>' : '') + '</span>' +
+            (c.llamado_at && c.estado === 'confirmada' ? '<span class="cita-aviso">Avisado ' + esc(horaLocal(new Date(c.llamado_at))) + porQuien(c.llamado_por) + '</span>' : '') + estadoCita(c) + '</div>' +
           '<div class="cita-acciones">' + estadoCita(c) +
-            (deHoy ? '<button type="button" class="mini primario" data-atender="' + c.id + '">' + (c.llamado_at ? 'Avisar de nuevo' : 'Atender') + '</button>' : '') +
+            (deHoy ? '<button type="button" class="mini' + (c.llamado_at ? '' : ' primario') + '" data-atender="' + c.id + '">' + (c.llamado_at ? 'Avisar de nuevo' : 'Atender') + '</button>' : '') +
             (real ? '<a class="mini" href="https://wa.me/' + esc(tel) + '" target="_blank" rel="noopener" aria-label="Escribir al paciente por WhatsApp">WhatsApp</a>' : '') +
-            (vista === 'proximas' ? '<button type="button" class="mini peligro" data-cancelar="' + c.id + '">Cancelar</button>' : '') +
+            (pendiente ? botonesLlegada(c) : '') +
+            (vista === 'proximas' && c.estado === 'confirmada' && !pendiente ? '<button type="button" class="mini peligro" data-cancelar="' + c.id + '">Cancelar</button>' : '') +
           '</div></li>';
       }).join('') + '</ul></div>';
     }).join('');
@@ -493,7 +707,7 @@
         b.disabled = true; b.textContent = 'Avisando…';
         try {
           var r = await panel({ accion: 'atender', cita_id: b.dataset.atender });
-          var c = citas.find(function (x) { return x.id === b.dataset.atender; }); if (c) c.llamado_at = r.llamado_at;
+          var c = citas.find(function (x) { return x.id === b.dataset.atender; }); if (c) { c.llamado_at = r.llamado_at; c.llamado_por = r.llamado_por || null; }
           pintarCitas();
         } catch (e) {
           b.disabled = false; b.textContent = 'Atender';
@@ -506,7 +720,7 @@
         b.disabled = true;
         var r = await App.sb.rpc('marcar_cita', { p_cita: b.dataset.id, p_estado: b.dataset.marcar });
         if (r.error) { b.disabled = false; alert('No se pudo guardar. Intente de nuevo.'); return; }
-        var c = citas.find(function (x) { return x.id === b.dataset.id; }); if (c) c.estado = b.dataset.marcar;
+        var c = citas.find(function (x) { return x.id === b.dataset.id; }); if (c) { c.estado = b.dataset.marcar; c.marcada_por = asistente ? asistente.nombre : null; }
         pintarCitas();
       });
     });

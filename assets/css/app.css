@@ -467,3 +467,99 @@ figcaption .enlace-boton { padding: 0; font-size: 13px; }
 .tarjetas-perfil .caja-titulo h2, .tarjetas-perfil .enlace-texto h2, .cuenta-mitad h2, #caja-citas > .caja-titulo h2 { display: flex; align-items: center; gap: 10px; color: var(--verde-oscuro); }
 .tarjetas-perfil .caja-titulo h2::before, .tarjetas-perfil .enlace-texto h2::before, .cuenta-mitad h2::before, #caja-citas > .caja-titulo h2::before { content: ""; flex: none; width: 5px; height: 20px; border-radius: 3px; background: var(--verde); }
 .ficha-caja dd { overflow-wrap: anywhere; }
+
+/* ===== Acceso para la asistente (plan Profesional) ===== */
+.caja-asistentes[hidden] { display: none; }
+.etiqueta-plan { font-size: 12px; font-weight: 700; color: var(--verde-oscuro); background: var(--verde-tinte); padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
+.lista-asistentes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.lista-asistentes > li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--borde); border-radius: 12px; }
+.asistente-inicial { width: 40px; height: 40px; border-radius: 999px; background: var(--verde-tinte); color: var(--verde-oscuro); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; }
+.asistente-datos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.asistente-datos strong { font-size: 15px; }
+.asistente-datos span { font-size: 13px; color: var(--texto-2); overflow-wrap: anywhere; }
+.asistente-pie { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 13px; color: var(--texto-2); }
+.asistente-pie .casilla-linea { font-size: 13px; }
+.asistente-pie .acciones-cita { margin-left: auto; }
+@media (max-width: 560px) { .lista-asistentes > li { grid-template-columns: auto minmax(0, 1fr); } .lista-asistentes .estado { grid-column: 2; justify-self: start; } .asistente-pie { grid-column: 1 / -1; } .asistente-pie .acciones-cita { margin-left: 0; } }
+.form-asistente { border: 1px solid var(--borde); border-radius: 12px; padding: 14px; gap: 12px; background: #FBFCFB; }
+.form-asistente[hidden] { display: none; }
+.form-asistente > strong { font-size: 15px; }
+.form-asistente-campos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 760px) { .form-asistente-campos { grid-template-columns: minmax(0, 1fr); } }
+.form-asistente .campo input { height: 44px; font-size: 15px; }
+.form-asistente .telefono { display: flex; align-items: stretch; height: 44px; border: 1px solid var(--borde-fuerte); border-radius: 10px; background: var(--blanco); overflow: hidden; }
+.form-asistente .telefono:focus-within { outline: 2px solid var(--verde); outline-offset: -1px; border-color: var(--verde); }
+.form-asistente .telefono .prefijo { flex: none; display: flex; align-items: center; padding: 0 12px; background: #F1F5F3; border-right: 1px solid var(--borde); font-size: 15px; font-weight: 600; }
+.form-asistente .telefono input { flex: 1; min-width: 0; height: auto; border: none; border-radius: 0; outline: none; }
+.form-asistente .mensaje[hidden], .caja-asistentes > .mensaje[hidden] { display: none; }
+.casilla-linea { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; font-weight: 600; line-height: 1.45; cursor: pointer; }
+.casilla-linea input { flex: none; width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--verde); }
+.casilla-linea .ayuda { display: block; font-weight: 400; }
+.sin-plan-pro { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 14px; border: 1px dashed #9CCFC4; border-radius: 12px; background: #FBFCFB; font-size: 14px; line-height: 1.5; }
+
+/* Vista de la asistente: misma pantalla de «Mis citas», sin configuración. */
+.modo-asistente [data-seccion="configuracion"] { display: none; }
+.selector-medico { display: flex; flex-direction: column; gap: 4px; width: 100%; font-size: 13px; font-weight: 600; color: var(--texto-2); }
+.selector-medico select { height: 40px; padding: 0 10px; border: 1px solid var(--borde-fuerte); border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--tinta); background: var(--blanco); }
+.por-quien { font-weight: 600; }
+.limite-asistentes { margin: 10px 0 0; }
+/* «Asistió» / «No asistió» como un solo control; las citas ya marcadas de hoy quedan en su lugar, más tenues. */
+.marcar-llegada { display: inline-flex; border: 1px solid var(--borde-fuerte); border-radius: 8px; overflow: hidden; background: var(--blanco); }
+.marcar-llegada button { border: none; background: transparent; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--tinta); padding: 6px 10px; cursor: pointer; }
+.marcar-llegada button + button { border-left: 1px solid var(--borde-fuerte); }
+.marcar-llegada [data-marcar="completada"]:hover { background: var(--verde-tinte); color: var(--verde-oscuro); }
+.marcar-llegada [data-marcar="no_asistio"]:hover { background: #FEF3F2; color: #B42318; }
+.marcar-llegada button:disabled { opacity: .5; cursor: default; }
+.cita.marcada .cita-hora, .cita.marcada .cita-info > strong, .cita.marcada .cita-info > span:not(.estado) { opacity: .6; }
+.cita-info .cita-aviso { display: flex; width: fit-content; align-items: center; gap: 6px; margin-top: 4px; font-size: 13px; font-weight: 700; color: #0C447C; }
+.cita-info .cita-aviso::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
+.cita-info .cita-aviso .por-quien { color: inherit; font-size: inherit; }
+
+/* Fila de cita: etiquetas (Confirmó, Asistió…) debajo del paciente; a la derecha solo botones, del mismo tamaño. */
+.cita-info .estado { display: flex; margin-top: 6px; width: fit-content; font-size: 12px; padding: 4px 10px; }
+.cita-info .estado .por-quien { color: inherit; font-size: inherit; }
+.cita-acciones .mini { min-width: 92px; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
+.marcar-llegada button { min-width: 92px; }
+.marcar-llegada [data-marcar="completada"] { background: var(--verde); color: var(--blanco); }
+.marcar-llegada [data-marcar="completada"]:hover { background: var(--verde-oscuro); color: var(--blanco); }
+.marcar-llegada { border-color: var(--verde); }
+.marcar-llegada button + button { border-left-color: var(--verde); }
+@media (max-width: 560px) {
+  /* Celular: botones a lo ancho y del mismo tamaño; «Asistió | No asistió» en su propia fila, mitad y mitad. */
+  .cita-acciones { display: flex; flex-wrap: wrap; gap: 8px; justify-content: stretch; }
+  .cita-acciones .mini { flex: 1 1 0; min-width: 0; min-height: 40px; }
+  .cita-acciones .marcar-llegada { flex: 1 1 100%; order: 2; }
+  .marcar-llegada button { flex: 1 1 0; min-width: 0; min-height: 40px; }
+}
+.cita-info .estado-verde { color: var(--verde-oscuro); }
+.cita-info .estado-rojo { color: #B42318; }
+.cita-info .estado-gris { color: #4A5A57; }
+.cita-info .estado-azul { color: #0C447C; }
+/* La etiqueta (Confirmó, Asistió · Carla…) va junto a los botones en escritorio y debajo del paciente en el celular. */
+.cita-info .estado { display: none; }
+.cita-acciones .estado { padding: 6px 12px; }
+@media (max-width: 560px) {
+  .cita-info .estado { display: flex; }
+  .cita-acciones .estado { display: none; }
+}
+
+/* Servicios editables en la misma pantalla */
+.lista-servicios-perfil li { grid-template-columns: minmax(0, 1fr) auto auto auto; }
+.lista-servicios-perfil li.confirmando { grid-template-columns: minmax(0, 1fr) auto; }
+.lista-servicios-perfil li.confirmando .srv-nombre { font-size: 14px; font-weight: 600; grid-column: auto; }
+.srv-botones { display: inline-flex; align-items: center; gap: 4px; }
+.lapiz { flex: none; width: 36px; height: 36px; border-radius: 9px; border: 1px solid transparent; background: transparent; color: var(--verde); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.lapiz:hover { background: var(--verde-tinte); border-color: #B9DDD5; }
+.srv-botones .papelera { margin-left: 0; }
+.form-servicio-campos { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.form-servicio select { width: 100%; height: 44px; padding: 0 10px; border: 1px solid var(--borde-fuerte); border-radius: 10px; font-family: inherit; font-size: 15px; color: var(--tinta); background: var(--blanco); }
+.form-servicio .campo .ayuda { display: inline; font-weight: 400; }
+@media (max-width: 760px) { .form-servicio-campos { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .form-servicio-campos .campo:first-child { grid-column: 1 / -1; } }
+@media (max-width: 560px) {
+  .lista-servicios-perfil li { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .lista-servicios-perfil li .srv-nombre { grid-column: 1 / -1; }
+  .lista-servicios-perfil li .srv-precio { text-align: left; }
+  .lista-servicios-perfil li.confirmando { grid-template-columns: minmax(0, 1fr); }
+  .lista-servicios-perfil li.confirmando .srv-botones { justify-content: flex-start; }
+}
+.lista-servicios-perfil.lista-scroll { padding-bottom: 6px; }

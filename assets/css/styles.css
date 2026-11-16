@@ -161,3 +161,4 @@ p { margin: 0; }
 .documento li + li { margin-top: 6px; }
 .aviso-borrador { background: #FFF6E5; border: 1px solid #F0D9A8; color: #5C4100; border-radius: 12px; padding: 14px 16px; font-size: 15px; margin-bottom: 28px; }
 .plan-titulo { font-family: var(--texto); font-size: 18px; font-weight: 700; }
+.pie-legal { flex-basis: 100%; margin: 0; font-size: 13px; color: var(--texto-2); }

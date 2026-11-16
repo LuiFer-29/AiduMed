@@ -10,12 +10,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/css/styles.css?v=4">
-<link rel="stylesheet" href="/assets/css/app.css?v=20">
+<link rel="stylesheet" href="/assets/css/styles.css?v=5">
+<link rel="stylesheet" href="/assets/css/app.css?v=21">
 <script src="/assets/vendor/supabase-2.119.0.js" defer></script>
 <script src="/assets/js/app.js?v=17" defer></script>
 <script src="/assets/vendor/qrcode-1.4.4.min.js" defer></script>
-<script src="/assets/js/mi-perfil.js?v=19" defer></script>
+<script src="/assets/js/mi-perfil.js?v=20" defer></script>
 </head>
 <body class="app">
 <header class="barra-app">
@@ -145,9 +145,45 @@
           </div>
         </section>
 
+        <section class="caja tarjeta-ancha caja-asistentes" id="caja-asistentes" hidden>
+          <div class="caja-titulo"><h2>Acceso para su asistente</h2><span class="etiqueta-plan">Plan Profesional</span></div>
+          <p class="ayuda">Su asistente o secretaria entra con su propio correo y contraseña, y solo ve <strong>Mis citas</strong>: puede usar «Atender», marcar si el paciente asistió y cancelar citas. No ve su configuración, horarios ni vacaciones.</p>
+          <div id="asistentes-cuerpo"></div>
+          <form class="form-app form-asistente" id="form-asistente" hidden autocomplete="off" novalidate>
+            <strong>Dar acceso a su asistente</strong>
+            <div class="form-asistente-campos">
+              <label class="campo">Nombre completo<input type="text" id="as-nombre" maxlength="80" placeholder="Carla Martínez" required></label>
+              <label class="campo">Correo<input type="email" id="as-correo" maxlength="120" placeholder="carla@correo.com" required></label>
+              <label class="campo">WhatsApp<span class="telefono"><span class="prefijo">+504</span><input type="tel" id="as-whatsapp" inputmode="numeric" maxlength="9" placeholder="9999-9999" required></span></label>
+            </div>
+            <label class="casilla-linea"><input type="checkbox" id="as-recibe" checked><span>Pasarle a ella las consultas que el asistente de WhatsApp no pueda resolver. <span class="ayuda">Los pacientes recibirán su WhatsApp para escribirle directamente.</span></span></label>
+            <p class="mensaje error" id="as-error" hidden></p>
+            <div class="cerrar-dia-botones">
+              <button type="submit" class="boton boton-primario boton-chico" id="as-enviar">Enviar invitación</button>
+              <button type="button" class="boton boton-secundario boton-chico" id="as-cancelar">Cancelar</button>
+            </div>
+          </form>
+          <p class="mensaje" id="as-msg" hidden></p>
+        </section>
+
         <section class="caja tarjeta-ancha">
-          <div class="caja-titulo"><h2>Servicios y precios</h2><a class="editar-enlace" href="/registro?paso=3">Editar</a></div>
+          <div class="caja-titulo"><h2>Servicios y precios</h2></div>
+          <p class="ayuda">El asistente ofrece estos servicios a sus pacientes y usa la duración para apartar el espacio en su agenda.</p>
           <ul class="lista-servicios-perfil lista-scroll" id="servicios"></ul>
+          <button type="button" class="boton-agregar-fecha" id="abrir-servicio">+ Agregar servicio</button>
+          <form class="form-fecha form-servicio" id="form-servicio" hidden autocomplete="off" novalidate>
+            <strong id="fs-titulo">Nuevo servicio</strong>
+            <div class="form-servicio-campos">
+              <label class="campo">Nombre del servicio<input type="text" id="fs-nombre" maxlength="60" placeholder="Ej.: Consulta general" required></label>
+              <label class="campo">Duración<select id="fs-duracion"><option>15 min</option><option selected>30 min</option><option>45 min</option><option>60 min</option><option>90 min</option></select></label>
+              <label class="campo">Precio (L)<input type="text" id="fs-precio" inputmode="numeric" maxlength="9" placeholder="Opcional · Ej.: 1,200"></label>
+            </div>
+            <p class="mensaje error" id="fs-error" hidden></p>
+            <div class="cerrar-dia-botones">
+              <button type="submit" class="boton boton-primario boton-chico" id="fs-guardar">Guardar servicio</button>
+              <button type="button" class="boton boton-secundario boton-chico" id="fs-cancelar">Cancelar</button>
+            </div>
+          </form>
         </section>
 
         <section class="caja">
