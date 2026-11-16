@@ -22,6 +22,9 @@ export type Medico = Perfil & {
   consultorio?: string | null; numero_consultorio?: string | null; direccion?: string | null; ubicacion_gps?: string | null;
   whatsapp_consultorio?: string | null; whatsapp_secretaria?: string | null; derivar_a?: string | null;
   telefono_consultorio?: string | null; servicios?: Servicio[] | null; descripcion?: string | null;
+  plan?: string | null;
+  // Asistente o secretaria con acceso al panel (plan Profesional); si «recibe_derivaciones», le llegan las consultas.
+  asistentes?: { whatsapp: string | null; recibe_derivaciones: boolean; estado: string }[] | null;
 };
 export type Conversacion = { telefono: string; medico_id: string | null; paso: string; datos: Record<string, any>; ultimo_mensaje_at?: string };
 export type Paciente = { id: string; telefono: string; nombre: string | null };
@@ -880,7 +883,9 @@ class Sesion {
   contacto(): Salida[] {
     const m = this.medico;
     if (!m) return this.inicio();
-    const num = (m.derivar_a === "Otro número" ? m.whatsapp_secretaria : m.whatsapp_consultorio) || m.whatsapp_consultorio || "";
+    const asistente = ["Profesional", "Piloto fundador"].includes(String(m.plan || ""))
+      ? (m.asistentes || []).find((a) => a.recibe_derivaciones && a.estado !== "revocada" && a.whatsapp) : undefined;
+    const num = asistente?.whatsapp || (m.derivar_a === "Otro número" ? m.whatsapp_secretaria : m.whatsapp_consultorio) || m.whatsapp_consultorio || "";
     const digitos = num.replace(/\D/g, "");
     const wa = digitos ? `https://wa.me/${digitos.length === 8 ? "504" + digitos : digitos}` : "";
     const lineas = [

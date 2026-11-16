@@ -2,6 +2,8 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import type { Almacen, Cita, Medico } from "./flujo.ts";
 
+// El médico con su asistente (para pasarle las consultas que el asistente de WhatsApp no resuelve).
+const CON_ASISTENTES = "*, asistentes(whatsapp, recibe_derivaciones, estado)";
 const sinAcentos = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 export function crearAlmacen(sb: SupabaseClient): Almacen & {
@@ -20,12 +22,12 @@ export function crearAlmacen(sb: SupabaseClient): Almacen & {
       falla(await sb.from("conversaciones").upsert({ ...c, actualizada_at: new Date().toISOString() }));
     },
     async medicoPorId(id) {
-      const r = await sb.from("medicos").select("*").eq("id", id).maybeSingle();
+      const r = await sb.from("medicos").select(CON_ASISTENTES).eq("id", id).maybeSingle();
       falla(r);
       return r.data as Medico | null;
     },
     async medicoPorCodigo(codigo) {
-      const r = await sb.from("medicos").select("*").ilike("codigo", codigo).maybeSingle();
+      const r = await sb.from("medicos").select(CON_ASISTENTES).ilike("codigo", codigo).maybeSingle();
       falla(r);
       return r.data as Medico | null;
     },

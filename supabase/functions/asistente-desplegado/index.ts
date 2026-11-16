@@ -1,12 +1,12 @@
 // ARCHIVO GENERADO: no editar a mano. Fuente en supabase/functions/asistente/ (se empaqueta con esbuild).
 
-// index.ts
+// supabase/functions/asistente/index.ts
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-// correo.ts
+// supabase/functions/asistente/correo.ts
 import nodemailer from "npm:nodemailer@6.9.16";
 
-// tiempo.ts
+// supabase/functions/asistente/tiempo.ts
 var OFFSET = "-06:00";
 var DIAS = ["Domingo", "Lunes", "Martes", "Mi\xE9rcoles", "Jueves", "Viernes", "S\xE1bado"];
 var DIAS_CORTOS = ["Dom", "Lun", "Mar", "Mi\xE9", "Jue", "Vie", "S\xE1b"];
@@ -55,7 +55,7 @@ function pascua(anio) {
   return `${anio}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
 }
 
-// correo.ts
+// supabase/functions/asistente/correo.ts
 var transporte = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
@@ -108,6 +108,33 @@ async function avisarFotoPendiente(m, urlFoto) {
     console.log(`Correo enviado: foto por aprobar \u2192 suscripciones@aidu.pro (${r.response || r.messageId})`);
   } catch (e) {
     console.error("Correo", e);
+  }
+}
+async function invitarAsistente(para, nombre, medico, enlace, cuentaNueva) {
+  const primerNombre2 = nombre.trim().split(/\s+/)[0] || nombre;
+  try {
+    const r = await transporte.sendMail({
+      from: '"Aid\xFA Med" <hola@aidu.pro>',
+      to: para,
+      subject: `${medico} le dio acceso a su agenda en Aid\xFA Med`,
+      html: html(
+        `Hola, ${primerNombre2}: ya puede manejar la agenda de ${medico}`,
+        [
+          ["\xBFQu\xE9 puede hacer?", "Ver las citas del d\xEDa y de las pr\xF3ximas semanas, avisarle al paciente cuando el m\xE9dico est\xE1 listo con el bot\xF3n <strong>\xABAtender\xBB</strong>, marcar si el paciente asisti\xF3 y cancelar citas."],
+          ["Primer paso", cuentaNueva ? "Cree su contrase\xF1a con el bot\xF3n de abajo. Despu\xE9s entrar\xE1 siempre en <strong>aidumed.app</strong> con este correo y esa contrase\xF1a." : "Entre en <strong>aidumed.app</strong> con este correo y la contrase\xF1a que ya usa en Aid\xFA Med."]
+        ],
+        "Si el enlace venci\xF3, p\xEDdale al m\xE9dico que le reenv\xEDe la invitaci\xF3n desde su panel. Si no esperaba este correo, puede ignorarlo.",
+        [cuentaNueva ? "Crear mi contrase\xF1a" : "Entrar a la agenda", enlace],
+        "Aid\xFA Med \xB7 Su asistente de citas por WhatsApp",
+        true
+      ),
+      text: `Hola, ${primerNombre2}. ${medico} le dio acceso a su agenda en Aid\xFA Med. ${cuentaNueva ? "Cree su contrase\xF1a aqu\xED" : "Entre aqu\xED"}: ${enlace}`
+    });
+    console.log(`Correo enviado: invitaci\xF3n de asistente \u2192 ${para} (${r.response || r.messageId})`);
+    return true;
+  } catch (e) {
+    console.error("Correo", e);
+    return false;
   }
 }
 async function recordarRegistro(para, nombre) {
@@ -182,7 +209,8 @@ function crearAvisos(prueba) {
   };
 }
 
-// datos.ts
+// supabase/functions/asistente/datos.ts
+var CON_ASISTENTES = "*, asistentes(whatsapp, recibe_derivaciones, estado)";
 var sinAcentos = (t) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 function crearAlmacen(sb2) {
   const falla = (r) => {
@@ -198,12 +226,12 @@ function crearAlmacen(sb2) {
       falla(await sb2.from("conversaciones").upsert({ ...c, actualizada_at: (/* @__PURE__ */ new Date()).toISOString() }));
     },
     async medicoPorId(id) {
-      const r = await sb2.from("medicos").select("*").eq("id", id).maybeSingle();
+      const r = await sb2.from("medicos").select(CON_ASISTENTES).eq("id", id).maybeSingle();
       falla(r);
       return r.data;
     },
     async medicoPorCodigo(codigo) {
-      const r = await sb2.from("medicos").select("*").ilike("codigo", codigo).maybeSingle();
+      const r = await sb2.from("medicos").select(CON_ASISTENTES).ilike("codigo", codigo).maybeSingle();
       falla(r);
       return r.data;
     },
@@ -297,7 +325,7 @@ function crearAlmacen(sb2) {
   };
 }
 
-// disponibilidad.ts
+// supabase/functions/asistente/disponibilidad.ts
 var DIAS2 = ["Domingo", "Lunes", "Martes", "Mi\xE9rcoles", "Jueves", "Viernes", "S\xE1bado"];
 var AVISO_MINIMO_MIN = 60;
 function minutos(texto2) {
@@ -383,7 +411,7 @@ function motivoSinHorario(p, fecha, feriados, ahora) {
   return null;
 }
 
-// especialidades.ts
+// supabase/functions/asistente/especialidades.ts
 var ESPECIALIDADES = [
   { nombre: "Medicina general", plural: "m\xE9dicos generales", raices: ["medicina general", "medico general", "doctor general", "general", "chequeo", "consulta general", "medico familiar", "medicina familiar"] },
   { nombre: "Odontolog\xEDa", plural: "dentistas", raices: ["odonto", "dentist", "dental", "muela", "diente", "ortodon", "brackets", "frenos"] },
@@ -431,7 +459,7 @@ function esDeEspecialidad(m, e) {
   return !!reconocida && reconocida.nombre === e.nombre;
 }
 
-// flujo.ts
+// supabase/functions/asistente/flujo.ts
 var corto = (t, n) => t.length > n ? t.slice(0, n - 1).trimEnd() + "\u2026" : t;
 var sinAcentos2 = (t) => t.normalize("NFD").replace(/[̀-ͯ]/g, "");
 var nombreMedico = (m) => [m.titulo, m.nombre].filter(Boolean).join(" ");
@@ -536,6 +564,10 @@ var Sesion = class {
     this.conv = conv;
     this.medico = medico;
   }
+  e;
+  d;
+  conv;
+  medico;
   /** Acciones que no deben tocar el estado guardado de la conversación (p. ej. "Confirmo"). */
   sinGuardar = false;
   get datos() {
@@ -1244,7 +1276,8 @@ Le enviar\xE9 un recordatorio el d\xEDa anterior por la tarde. Si necesita cambi
   contacto() {
     const m = this.medico;
     if (!m) return this.inicio();
-    const num = (m.derivar_a === "Otro n\xFAmero" ? m.whatsapp_secretaria : m.whatsapp_consultorio) || m.whatsapp_consultorio || "";
+    const asistente = ["Profesional", "Piloto fundador"].includes(String(m.plan || "")) ? (m.asistentes || []).find((a) => a.recibe_derivaciones && a.estado !== "revocada" && a.whatsapp) : void 0;
+    const num = asistente?.whatsapp || (m.derivar_a === "Otro n\xFAmero" ? m.whatsapp_secretaria : m.whatsapp_consultorio) || m.whatsapp_consultorio || "";
     const digitos = num.replace(/\D/g, "");
     const wa = digitos ? `https://wa.me/${digitos.length === 8 ? "504" + digitos : digitos}` : "";
     const lineas = [
@@ -1307,7 +1340,7 @@ Si prefiere, puede seguir con ${conArticuloNegrita(this.medico)}.` : ""}`,
   }
 };
 
-// ia.ts
+// supabase/functions/asistente/ia.ts
 var MODELO = "claude-haiku-5-5";
 var HERRAMIENTA = {
   name: "interpretar",
@@ -1409,7 +1442,7 @@ function crearCerebro(apiKey, alUsar) {
   };
 }
 
-// plantillas.ts
+// supabase/functions/asistente/plantillas.ts
 var limpio = (t, n = 60) => String(t ?? "").replace(/\s+/g, " ").trim().slice(0, n) || "\u2014";
 var nombreMedico2 = (m) => [m.titulo, m.nombre].filter(Boolean).join(" ");
 var primerNombre = (t) => (t || "").split(" ")[0] || "";
@@ -1519,7 +1552,7 @@ Por favor, dir\xEDjase ${a}.
 \xA1Le esperamos!`;
 }
 
-// whatsapp.ts
+// supabase/functions/asistente/whatsapp.ts
 var VERSION = Deno.env.get("WA_API_VERSION") || "v25.0";
 function cargaUtil(para, s) {
   const base = { messaging_product: "whatsapp", recipient_type: "individual", to: para };
@@ -1608,7 +1641,7 @@ async function firmaValida(cuerpo, firma, secreto) {
   return dif === 0;
 }
 
-// index.ts
+// supabase/functions/asistente/index.ts
 var claveServicio = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || (() => {
   try {
     return JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}").default;
@@ -1767,9 +1800,89 @@ async function panel(req) {
   if (u.error || !u.data.user) return json(req, { error: "Inicie sesi\xF3n de nuevo." }, 401);
   const uid = u.data.user.id;
   const cuerpo = await req.json().catch(() => ({}));
+  if (cuerpo.accion === "asistente_inicio") {
+    const r = await sb.from("asistentes").select("id, nombre, medicos(id, titulo, nombre, especialidad, especialidad_otra, consultorio, numero_consultorio, foto_path, estado, plan, updated_at)").eq("user_id", uid).neq("estado", "revocada").order("creado_at");
+    const filas = (r.data || []).filter((a) => a.medicos && esPro(a.medicos.plan));
+    if (filas.length) {
+      await sb.from("asistentes").update({ estado: "activa", ultimo_acceso: (/* @__PURE__ */ new Date()).toISOString() }).in("id", filas.map((a) => a.id));
+    }
+    return json(req, {
+      nombre: filas[0]?.nombre || null,
+      medicos: filas.map((a) => {
+        const { plan: _p, ...m2 } = a.medicos;
+        return m2;
+      })
+    });
+  }
   const med = await sb.from("medicos").select("*").eq("id", uid).maybeSingle();
-  if (!med.data) return json(req, { error: "No encontramos su perfil." }, 404);
-  const m = med.data;
+  let m, hechoPor = null;
+  if (med.data) {
+    m = med.data;
+  } else {
+    if (cuerpo.accion !== "cerrados" && cuerpo.accion !== "atender") return json(req, { error: "No encontramos su perfil." }, 404);
+    const a = await sb.from("asistentes").select("nombre, medicos(*)").eq("user_id", uid).eq("medico_id", String(cuerpo.medico_id || "")).neq("estado", "revocada").maybeSingle();
+    if (!a.data?.medicos || !esPro(a.data.medicos.plan)) return json(req, { error: "Ya no tiene acceso a esta agenda." }, 403);
+    m = a.data.medicos;
+    hechoPor = a.data.nombre;
+  }
+  if (cuerpo.accion === "asistentes") return json(req, { asistentes: await listaAsistentes(m.id), disponible: esPro(m.plan) });
+  if (cuerpo.accion === "invitar_asistente") {
+    if (!esPro(m.plan)) return json(req, { error: "El acceso para su asistente es parte del plan Profesional." }, 403);
+    const nombre = String(cuerpo.nombre || "").trim().replace(/\s+/g, " ");
+    const correo = String(cuerpo.correo || "").trim().toLowerCase();
+    const whatsapp = String(cuerpo.whatsapp || "").replace(/\D/g, "");
+    const recibe = cuerpo.recibe_derivaciones !== false;
+    if (nombre.length < 3 || nombre.length > 80) return json(req, { error: "Escriba el nombre completo de su asistente." }, 400);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) return json(req, { error: "Revise el correo: no parece v\xE1lido." }, 400);
+    if (whatsapp.length !== 8) return json(req, { error: "Escriba los 8 d\xEDgitos del WhatsApp de su asistente." }, 400);
+    if (correo === String(u.data.user.email || "").toLowerCase()) return json(req, { error: "Ese es su propio correo. Use el de su asistente." }, 400);
+    const vigentes = await listaAsistentes(m.id);
+    if (vigentes.some((a) => a.correo === correo)) return json(req, { error: "Ya le dio acceso a ese correo." }, 400);
+    if (vigentes.length >= MAX_ASISTENTES) return json(req, { error: `Puede tener hasta ${MAX_ASISTENTES} asistentes. Quite el acceso a una para agregar otra.` }, 400);
+    let userId = null, enlace = "https://aidumed.app/cuenta?modo=entrar", cuentaNueva = false;
+    const gen = await sb.auth.admin.generateLink({ type: "invite", email: correo, options: { redirectTo: "https://aidumed.app/nueva-contrasena?bienvenida=1" } });
+    if (!gen.error && gen.data?.user) {
+      userId = gen.data.user.id;
+      enlace = gen.data.properties.action_link;
+      cuentaNueva = true;
+    } else {
+      const ex = await sb.rpc("usuario_por_correo", { p_correo: correo });
+      userId = ex.data || null;
+      if (!userId) return json(req, { error: "No se pudo crear la cuenta de su asistente. Intente de nuevo." }, 500);
+      const esMedico = await sb.from("medicos").select("id").eq("id", userId).maybeSingle();
+      const esAdm = await sb.from("admins").select("user_id").eq("user_id", userId).maybeSingle();
+      if (esMedico.data || esAdm.data) return json(req, { error: "Ese correo ya tiene una cuenta de m\xE9dico en Aid\xFA Med. Use otro correo para su asistente." }, 400);
+    }
+    await sb.from("asistentes").delete().eq("medico_id", m.id).eq("correo", correo).eq("estado", "revocada");
+    if (recibe) await sb.from("asistentes").update({ recibe_derivaciones: false }).eq("medico_id", m.id);
+    const ins = await sb.from("asistentes").insert({ medico_id: m.id, user_id: userId, nombre, correo, whatsapp, recibe_derivaciones: recibe, estado: "invitada" });
+    if (ins.error) return json(req, { error: "No se pudo guardar. Intente de nuevo." }, 500);
+    const enviado = await invitarAsistente(correo, nombre, nombreMedico3(m), enlace, cuentaNueva);
+    return json(req, { ok: true, enviado, asistentes: await listaAsistentes(m.id) });
+  }
+  if (cuerpo.accion === "reenviar_asistente" || cuerpo.accion === "quitar_asistente" || cuerpo.accion === "derivar_asistente") {
+    const a = await sb.from("asistentes").select("*").eq("id", String(cuerpo.id || "")).eq("medico_id", m.id).neq("estado", "revocada").maybeSingle();
+    if (!a.data) return json(req, { error: "No encontramos ese acceso." }, 404);
+    if (cuerpo.accion === "quitar_asistente") {
+      await sb.from("asistentes").update({ estado: "revocada", recibe_derivaciones: false, revocado_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", a.data.id);
+    } else if (cuerpo.accion === "derivar_asistente") {
+      const si = cuerpo.recibe_derivaciones === true;
+      if (si) await sb.from("asistentes").update({ recibe_derivaciones: false }).eq("medico_id", m.id);
+      await sb.from("asistentes").update({ recibe_derivaciones: si }).eq("id", a.data.id);
+    } else {
+      let enlace = "https://aidumed.app/cuenta?modo=entrar", nueva = false;
+      if (!a.data.ultimo_acceso) {
+        const gen = await sb.auth.admin.generateLink({ type: "recovery", email: a.data.correo, options: { redirectTo: "https://aidumed.app/nueva-contrasena?bienvenida=1" } });
+        if (!gen.error && gen.data?.properties?.action_link) {
+          enlace = gen.data.properties.action_link;
+          nueva = true;
+        }
+      }
+      const ok = await invitarAsistente(a.data.correo, a.data.nombre, nombreMedico3(m), enlace, nueva);
+      if (!ok) return json(req, { error: "No se pudo enviar el correo. Intente de nuevo." }, 502);
+    }
+    return json(req, { ok: true, asistentes: await listaAsistentes(m.id) });
+  }
   if (cuerpo.accion === "cerrados") {
     const desde = String(cuerpo.desde || ""), hasta = String(cuerpo.hasta || "");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta) || hasta < desde) return json(req, { error: "Fechas no v\xE1lidas" }, 400);
@@ -1788,26 +1901,34 @@ async function panel(req) {
     return json(req, { dias });
   }
   if (cuerpo.accion === "atender") {
-    const r = await sb.from("citas").select("*, pacientes(telefono)").eq("id", String(cuerpo.cita_id || "")).eq("medico_id", uid).maybeSingle();
+    const r = await sb.from("citas").select("*, pacientes(telefono)").eq("id", String(cuerpo.cita_id || "")).eq("medico_id", m.id).maybeSingle();
     if (!r.data) return json(req, { error: "No encontramos esa cita." }, 404);
     if (r.data.estado !== "confirmada") return json(req, { error: "La cita ya no est\xE1 confirmada." }, 400);
     const tel = r.data.pacientes?.telefono;
     const ahora = (/* @__PURE__ */ new Date()).toISOString();
     if (!tel) return json(req, { error: "La cita no tiene n\xFAmero de WhatsApp." }, 400);
     if (esSimulado(tel)) {
-      await sb.from("citas").update({ llamado_at: ahora }).eq("id", r.data.id);
-      return json(req, { ok: true, via: "prueba", llamado_at: ahora });
+      await sb.from("citas").update({ llamado_at: ahora, llamado_por: hechoPor }).eq("id", r.data.id);
+      return json(req, { ok: true, via: "prueba", llamado_at: ahora, llamado_por: hechoPor });
     }
     if (!whatsappListo()) return json(req, { error: "WhatsApp no est\xE1 configurado todav\xEDa." }, 503);
     const ult = await sb.from("mensajes").select("creado_at").eq("telefono", tel).eq("direccion", "entrante").gte("creado_at", new Date(Date.now() - 23.5 * 36e5).toISOString()).limit(1);
     const enVentana = !!ult.data?.length;
     const opciones = enVentana ? [cargaUtil(tel, { tipo: "texto", texto: turnoListoTexto(r.data, m) })] : turnoListo(tel, r.data, m);
-    const id = await enviarPlantilla(tel, opciones, uid);
+    const id = await enviarPlantilla(tel, opciones, m.id);
     if (!id) return json(req, { error: "WhatsApp no acept\xF3 el mensaje. Intente de nuevo en un momento." }, 502);
-    await sb.from("citas").update({ llamado_at: ahora }).eq("id", r.data.id);
-    return json(req, { ok: true, via: enVentana ? "texto" : "plantilla", llamado_at: ahora });
+    await sb.from("citas").update({ llamado_at: ahora, llamado_por: hechoPor }).eq("id", r.data.id);
+    return json(req, { ok: true, via: enVentana ? "texto" : "plantilla", llamado_at: ahora, llamado_por: hechoPor });
   }
   return json(req, { error: "Acci\xF3n no v\xE1lida" }, 400);
+}
+var PLANES_PRO = ["Profesional", "Piloto fundador"];
+var MAX_ASISTENTES = 2;
+var esPro = (plan) => PLANES_PRO.includes(String(plan || ""));
+var nombreMedico3 = (m) => [m.titulo, m.nombre].filter(Boolean).join(" ") || "Su m\xE9dico";
+async function listaAsistentes(medicoId) {
+  const r = await sb.from("asistentes").select("id, nombre, correo, whatsapp, recibe_derivaciones, estado, creado_at, ultimo_acceso").eq("medico_id", medicoId).neq("estado", "revocada").order("creado_at");
+  return r.data || [];
 }
 async function esAdmin(req) {
   const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");

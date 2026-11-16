@@ -4,9 +4,9 @@
 //  POST /asistente/simular    → simulador del panel de administración (sesión de administrador)
 //  POST /asistente/recordatorios → recordatorios de citas (día anterior, 5:30–11:30 p. m., pg_cron; clave interna)
 //  POST /asistente/evento     → avisos (el consultorio canceló, foto nueva por aprobar; trigger; clave interna)
-//  POST /asistente/panel      → acciones del panel del médico (sesión del médico): días cerrados y "Atender"
+//  POST /asistente/panel      → acciones del panel del médico o de su asistente: días cerrados, "Atender" y accesos de asistentes
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { avisarFotoPendiente, crearAvisos, recordarRegistro } from "./correo.ts";
+import { avisarFotoPendiente, crearAvisos, invitarAsistente, recordarRegistro } from "./correo.ts";
 import { crearAlmacen } from "./datos.ts";
 import { atender, type Cita, type Medico, type Salida } from "./flujo.ts";
 import { crearCerebro } from "./ia.ts";
@@ -180,9 +180,94 @@ async function panel(req: Request): Promise<Response> {
   if (u.error || !u.data.user) return json(req, { error: "Inicie sesión de nuevo." }, 401);
   const uid = u.data.user.id;
   const cuerpo = await req.json().catch(() => ({}));
+
+  // La asistente al entrar: los médicos cuya agenda maneja (solo datos para el encabezado).
+  if (cuerpo.accion === "asistente_inicio") {
+    const r = await sb.from("asistentes").select("id, nombre, medicos(id, titulo, nombre, especialidad, especialidad_otra, consultorio, numero_consultorio, foto_path, estado, plan, updated_at)")
+      .eq("user_id", uid).neq("estado", "revocada").order("creado_at");
+    const filas = (r.data || []).filter((a: any) => a.medicos && esPro(a.medicos.plan));
+    if (filas.length) {
+      await sb.from("asistentes").update({ estado: "activa", ultimo_acceso: new Date().toISOString() }).in("id", filas.map((a: any) => a.id));
+    }
+    return json(req, {
+      nombre: filas[0]?.nombre || null,
+      medicos: filas.map((a: any) => { const { plan: _p, ...m } = a.medicos; return m; }),
+    });
+  }
+
   const med = await sb.from("medicos").select("*").eq("id", uid).maybeSingle();
-  if (!med.data) return json(req, { error: "No encontramos su perfil." }, 404);
-  const m = med.data as Medico;
+  let m: Medico, hechoPor: string | null = null;
+  if (med.data) {
+    m = med.data as Medico;
+  } else {
+    // Asistente: solo «cerrados» y «Atender», y solo para un médico que le dio acceso.
+    if (cuerpo.accion !== "cerrados" && cuerpo.accion !== "atender") return json(req, { error: "No encontramos su perfil." }, 404);
+    const a = await sb.from("asistentes").select("nombre, medicos(*)").eq("user_id", uid).eq("medico_id", String(cuerpo.medico_id || ""))
+      .neq("estado", "revocada").maybeSingle();
+    if (!a.data?.medicos || !esPro((a.data.medicos as any).plan)) return json(req, { error: "Ya no tiene acceso a esta agenda." }, 403);
+    m = a.data.medicos as unknown as Medico;
+    hechoPor = a.data.nombre;
+  }
+
+  // ----- La asistente o secretaria (solo el médico; plan Profesional) -----
+  if (cuerpo.accion === "asistentes") return json(req, { asistentes: await listaAsistentes(m.id), disponible: esPro(m.plan) });
+
+  if (cuerpo.accion === "invitar_asistente") {
+    if (!esPro(m.plan)) return json(req, { error: "El acceso para su asistente es parte del plan Profesional." }, 403);
+    const nombre = String(cuerpo.nombre || "").trim().replace(/\s+/g, " ");
+    const correo = String(cuerpo.correo || "").trim().toLowerCase();
+    const whatsapp = String(cuerpo.whatsapp || "").replace(/\D/g, "");
+    const recibe = cuerpo.recibe_derivaciones !== false;
+    if (nombre.length < 3 || nombre.length > 80) return json(req, { error: "Escriba el nombre completo de su asistente." }, 400);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) return json(req, { error: "Revise el correo: no parece válido." }, 400);
+    if (whatsapp.length !== 8) return json(req, { error: "Escriba los 8 dígitos del WhatsApp de su asistente." }, 400);
+    if (correo === String(u.data.user.email || "").toLowerCase()) return json(req, { error: "Ese es su propio correo. Use el de su asistente." }, 400);
+    const vigentes = await listaAsistentes(m.id);
+    if (vigentes.some((a) => a.correo === correo)) return json(req, { error: "Ya le dio acceso a ese correo." }, 400);
+    if (vigentes.length >= MAX_ASISTENTES) return json(req, { error: `Puede tener hasta ${MAX_ASISTENTES} asistentes. Quite el acceso a una para agregar otra.` }, 400);
+
+    // Cuenta nueva: enlace para crear contraseña. Cuenta existente (asiste a otro médico): solo aviso para entrar.
+    let userId: string | null = null, enlace = "https://aidumed.app/cuenta?modo=entrar", cuentaNueva = false;
+    const gen = await sb.auth.admin.generateLink({ type: "invite", email: correo, options: { redirectTo: "https://aidumed.app/nueva-contrasena?bienvenida=1" } });
+    if (!gen.error && gen.data?.user) {
+      userId = gen.data.user.id; enlace = gen.data.properties.action_link; cuentaNueva = true;
+    } else {
+      const ex = await sb.rpc("usuario_por_correo", { p_correo: correo });
+      userId = (ex.data as string | null) || null;
+      if (!userId) return json(req, { error: "No se pudo crear la cuenta de su asistente. Intente de nuevo." }, 500);
+      const esMedico = await sb.from("medicos").select("id").eq("id", userId).maybeSingle();
+      const esAdm = await sb.from("admins").select("user_id").eq("user_id", userId).maybeSingle();
+      if (esMedico.data || esAdm.data) return json(req, { error: "Ese correo ya tiene una cuenta de médico en Aidú Med. Use otro correo para su asistente." }, 400);
+    }
+    await sb.from("asistentes").delete().eq("medico_id", m.id).eq("correo", correo).eq("estado", "revocada");
+    if (recibe) await sb.from("asistentes").update({ recibe_derivaciones: false }).eq("medico_id", m.id);
+    const ins = await sb.from("asistentes").insert({ medico_id: m.id, user_id: userId, nombre, correo, whatsapp, recibe_derivaciones: recibe, estado: "invitada" });
+    if (ins.error) return json(req, { error: "No se pudo guardar. Intente de nuevo." }, 500);
+    const enviado = await invitarAsistente(correo, nombre, nombreMedico(m), enlace, cuentaNueva);
+    return json(req, { ok: true, enviado, asistentes: await listaAsistentes(m.id) });
+  }
+
+  if (cuerpo.accion === "reenviar_asistente" || cuerpo.accion === "quitar_asistente" || cuerpo.accion === "derivar_asistente") {
+    const a = await sb.from("asistentes").select("*").eq("id", String(cuerpo.id || "")).eq("medico_id", m.id).neq("estado", "revocada").maybeSingle();
+    if (!a.data) return json(req, { error: "No encontramos ese acceso." }, 404);
+    if (cuerpo.accion === "quitar_asistente") {
+      await sb.from("asistentes").update({ estado: "revocada", recibe_derivaciones: false, revocado_at: new Date().toISOString() }).eq("id", a.data.id);
+    } else if (cuerpo.accion === "derivar_asistente") {
+      const si = cuerpo.recibe_derivaciones === true;
+      if (si) await sb.from("asistentes").update({ recibe_derivaciones: false }).eq("medico_id", m.id);
+      await sb.from("asistentes").update({ recibe_derivaciones: si }).eq("id", a.data.id);
+    } else {
+      // Reenviar: si aún no ha entrado nunca, enlace para crear su contraseña; si ya entró, aviso para entrar.
+      let enlace = "https://aidumed.app/cuenta?modo=entrar", nueva = false;
+      if (!a.data.ultimo_acceso) {
+        const gen = await sb.auth.admin.generateLink({ type: "recovery", email: a.data.correo, options: { redirectTo: "https://aidumed.app/nueva-contrasena?bienvenida=1" } });
+        if (!gen.error && gen.data?.properties?.action_link) { enlace = gen.data.properties.action_link; nueva = true; }
+      }
+      const ok = await invitarAsistente(a.data.correo, a.data.nombre, nombreMedico(m), enlace, nueva);
+      if (!ok) return json(req, { error: "No se pudo enviar el correo. Intente de nuevo." }, 502);
+    }
+    return json(req, { ok: true, asistentes: await listaAsistentes(m.id) });
+  }
 
   // Días en que el consultorio no atiende por vacaciones, feriados o días libres (para "Mis citas").
   if (cuerpo.accion === "cerrados") {
@@ -206,15 +291,15 @@ async function panel(req: Request): Promise<Response> {
 
   // "Atender": avisa al paciente que el médico está listo.
   if (cuerpo.accion === "atender") {
-    const r = await sb.from("citas").select("*, pacientes(telefono)").eq("id", String(cuerpo.cita_id || "")).eq("medico_id", uid).maybeSingle();
+    const r = await sb.from("citas").select("*, pacientes(telefono)").eq("id", String(cuerpo.cita_id || "")).eq("medico_id", m.id).maybeSingle();
     if (!r.data) return json(req, { error: "No encontramos esa cita." }, 404);
     if (r.data.estado !== "confirmada") return json(req, { error: "La cita ya no está confirmada." }, 400);
     const tel = r.data.pacientes?.telefono as string | undefined;
     const ahora = new Date().toISOString();
     if (!tel) return json(req, { error: "La cita no tiene número de WhatsApp." }, 400);
     if (esSimulado(tel)) {
-      await sb.from("citas").update({ llamado_at: ahora }).eq("id", r.data.id);
-      return json(req, { ok: true, via: "prueba", llamado_at: ahora });
+      await sb.from("citas").update({ llamado_at: ahora, llamado_por: hechoPor }).eq("id", r.data.id);
+      return json(req, { ok: true, via: "prueba", llamado_at: ahora, llamado_por: hechoPor });
     }
     if (!whatsappListo()) return json(req, { error: "WhatsApp no está configurado todavía." }, 503);
     // Si el paciente escribió en las últimas 24 h, WhatsApp permite texto libre (gratis); si no, plantilla.
@@ -222,12 +307,23 @@ async function panel(req: Request): Promise<Response> {
       .gte("creado_at", new Date(Date.now() - 23.5 * 3600_000).toISOString()).limit(1);
     const enVentana = !!ult.data?.length;
     const opciones = enVentana ? [cargaUtil(tel, { tipo: "texto", texto: turnoListoTexto(r.data as Cita, m) })] : turnoListo(tel, r.data as Cita, m);
-    const id = await enviarPlantilla(tel, opciones, uid);
+    const id = await enviarPlantilla(tel, opciones, m.id);
     if (!id) return json(req, { error: "WhatsApp no aceptó el mensaje. Intente de nuevo en un momento." }, 502);
-    await sb.from("citas").update({ llamado_at: ahora }).eq("id", r.data.id);
-    return json(req, { ok: true, via: enVentana ? "texto" : "plantilla", llamado_at: ahora });
+    await sb.from("citas").update({ llamado_at: ahora, llamado_por: hechoPor }).eq("id", r.data.id);
+    return json(req, { ok: true, via: enVentana ? "texto" : "plantilla", llamado_at: ahora, llamado_por: hechoPor });
   }
   return json(req, { error: "Acción no válida" }, 400);
+}
+
+// ---------- Asistente o secretaria del médico ----------
+const PLANES_PRO = ["Profesional", "Piloto fundador"];
+const MAX_ASISTENTES = 2;
+const esPro = (plan: unknown) => PLANES_PRO.includes(String(plan || ""));
+const nombreMedico = (m: Medico) => [m.titulo, m.nombre].filter(Boolean).join(" ") || "Su médico";
+async function listaAsistentes(medicoId: string) {
+  const r = await sb.from("asistentes").select("id, nombre, correo, whatsapp, recibe_derivaciones, estado, creado_at, ultimo_acceso")
+    .eq("medico_id", medicoId).neq("estado", "revocada").order("creado_at");
+  return (r.data || []) as { id: string; nombre: string; correo: string; whatsapp: string; recibe_derivaciones: boolean; estado: string; creado_at: string; ultimo_acceso: string | null }[];
 }
 
 // ---------- Acciones del administrador sobre registros incompletos ----------

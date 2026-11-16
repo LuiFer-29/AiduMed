@@ -49,6 +49,30 @@ export async function avisarFotoPendiente(m: Medico, urlFoto: string) {
   }
 }
 
+/** A la asistente: el médico le dio acceso a su agenda. Si la cuenta es nueva, el enlace es para crear su contraseña. */
+export async function invitarAsistente(para: string, nombre: string, medico: string, enlace: string, cuentaNueva: boolean): Promise<boolean> {
+  const primerNombre = nombre.trim().split(/\s+/)[0] || nombre;
+  try {
+    const r = await transporte.sendMail({
+      from: '"Aidú Med" <hola@aidu.pro>', to: para,
+      subject: `${medico} le dio acceso a su agenda en Aidú Med`,
+      html: html(`Hola, ${primerNombre}: ya puede manejar la agenda de ${medico}`, [
+        ["¿Qué puede hacer?", "Ver las citas del día y de las próximas semanas, avisarle al paciente cuando el médico está listo con el botón <strong>«Atender»</strong>, marcar si el paciente asistió y cancelar citas."],
+        ["Primer paso", cuentaNueva
+          ? "Cree su contraseña con el botón de abajo. Después entrará siempre en <strong>aidumed.app</strong> con este correo y esa contraseña."
+          : "Entre en <strong>aidumed.app</strong> con este correo y la contraseña que ya usa en Aidú Med."],
+      ], "Si el enlace venció, pídale al médico que le reenvíe la invitación desde su panel. Si no esperaba este correo, puede ignorarlo.",
+      [cuentaNueva ? "Crear mi contraseña" : "Entrar a la agenda", enlace], "Aidú Med · Su asistente de citas por WhatsApp", true),
+      text: `Hola, ${primerNombre}. ${medico} le dio acceso a su agenda en Aidú Med. ${cuentaNueva ? "Cree su contraseña aquí" : "Entre aquí"}: ${enlace}`,
+    });
+    console.log(`Correo enviado: invitación de asistente → ${para} (${r.response || r.messageId})`);
+    return true;
+  } catch (e) {
+    console.error("Correo", e);
+    return false;
+  }
+}
+
 /** Al médico que no ha terminado su registro: recordatorio con enlace para continuar. */
 export async function recordarRegistro(para: string, nombre: string | null): Promise<boolean> {
   const saludo = nombre ? `Hola, ${nombre}` : "Hola";
