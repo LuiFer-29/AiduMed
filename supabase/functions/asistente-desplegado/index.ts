@@ -472,6 +472,7 @@ var lempiras = (p) => {
   return n ? `L ${n.toLocaleString("en-US")}` : "";
 };
 var limpiarNombre = (t) => t.replace(/[^\p{L}\s'.-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 60).split(" ").map((p) => p ? p[0].toUpperCase() + p.slice(1).toLowerCase() : p).join(" ");
+var ESPECIALIDAD_EXPLICITA = /(odont|dentist|pediatr|ortoped|traumatolog|nefrolog|ginecolog|gineco|obstetr|dermatolog|cardiolog|oftalmolog|optometr|otorrin|psicolog|sicolog|psiquiatr|siquiatr|nutricion|internist|endocrin|gastroenter|neurolog|urolog|neumolog|especialista|medic[oa] general|medicina general)/;
 function medicoEnTexto(texto2) {
   const m = texto2.match(/cita con (?:el |la )?(?:dra?|doctora?)\.?\s+([\p{L}][\p{L}\d .'-]{1,60}?)[\s.!¡?]*$/iu);
   return m ? m[1].trim() : null;
@@ -683,29 +684,19 @@ ${contexto2}
         botones: [{ id: `avisar:${indice}`, titulo: "S\xED, av\xEDseme" }, { id: "reg:otro", titulo: "Buscar otra" }]
       }];
     }
-    if (lista.length === 1) {
-      const m = lista[0];
-      this.medico = m;
-      this.ir("cabecera", { especialidad: e.nombre });
-      return [{
-        tipo: "botones",
-        texto: `En *Aid\xFA Med* tenemos ${m.titulo === "Dra." ? "a la" : m.titulo === "Dr." ? "al" : "a"} *${nombreMedico(m)}* (${e.nombre})${m.consultorio ? `, en ${m.consultorio}` : ""}. \xBFAgendamos una cita?`,
-        botones: [{ id: `esp:si:${m.id}`, titulo: "S\xED, agendar" }, { id: "reg:otro", titulo: "Buscar otra" }]
-      }];
-    }
     this.ir("elegir_medico", {});
     return [{
       tipo: "lista",
-      texto: `Estos son los ${e.plural} de *Aid\xFA Med*. Elija con qui\xE9n desea su cita:`,
+      texto: lista.length === 1 ? `Este es el m\xE9dico de ${e.nombre} disponible en *Aid\xFA Med*. El\xEDjalo para agendar su cita:` : `Estos son los ${e.plural} disponibles en *Aid\xFA Med*. Elija con qui\xE9n desea su cita:`,
       boton: "Ver m\xE9dicos",
       secciones: [{
         titulo: corto(e.nombre, 24),
-        filas: lista.slice(0, 10).map((m) => ({
+        filas: lista.slice(0, 9).map((m) => ({
           id: `med:${m.id}`,
           titulo: corto(nombreMedico(m), 24),
           descripcion: corto([m.consultorio, m.direccion].filter(Boolean).join(" \xB7 "), 72)
         }))
-      }]
+      }, { titulo: "Otras opciones", filas: [{ id: "reg:otro", titulo: "Buscar otra especialidad" }] }]
     }];
   }
   /** Citas próximas con todos sus médicos. */
@@ -747,8 +738,14 @@ ${contexto2}
     if (k === "med") {
       const m = await this.d.almacen.medicoPorId(v);
       if (!m || !disponible(m, this.d)) return this.inicio("Ese m\xE9dico ya no est\xE1 disponible. \xBFEres paciente o m\xE9dico?");
+      const desdeEspecialidad = this.conv.paso === "elegir_medico";
       this.medico = m;
-      return this.saludo();
+      if (!desdeEspecialidad) return this.saludo();
+      const salidas = await this.iniciarAgenda();
+      if (salidas[0] && "texto" in salidas[0]) salidas[0] = { ...salidas[0], texto: `Perfecto, agendemos con ${conArticuloNegrita(m)} \u{1F4C5}
+
+${salidas[0].texto}` };
+      return salidas;
     }
     if (k === "rec") return this.respuestaRecordatorio(v, w);
     if (k === "agenda") {
@@ -843,6 +840,10 @@ Mientras tanto, si necesita otra especialidad, escr\xEDbala cuando guste.` }];
     if (paso === "buscar_especialidad" || paso === "sin_especialidad") return this.buscarEspecialidad(texto2);
     if (paso === "elegir_medico") return especialidadEnTexto(texto2) ? this.buscarEspecialidad(texto2) : this.buscarMedico(texto2);
     if (paso === "prospecto") return this.guardarProspecto(texto2);
+    const espPedida = especialidadEnTexto(texto2);
+    if (espPedida && paso !== "nombre" && paso !== "quien" && ESPECIALIDAD_EXPLICITA.test(sinAcentos2(texto2.toLowerCase())) && (!this.medico || !esDeEspecialidad(this.medico, espPedida))) {
+      return this.buscarEspecialidad(texto2);
+    }
     if (paso === "nombre" && this.medico) {
       const n = limpiarNombre(texto2);
       if (n.length < 3) return [{ tipo: "texto", texto: "\xBFMe escribe el nombre completo, por favor? (nombre y apellido)" }];

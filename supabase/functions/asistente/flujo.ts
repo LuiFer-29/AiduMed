@@ -97,6 +97,9 @@ const limpiarNombre = (t: string) =>
     .split(" ").map((p) => (p ? p[0].toUpperCase() + p.slice(1).toLowerCase() : p)).join(" ");
 
 /** "Hola, quiero agendar una cita con el Dr. Luis Espinoza" → "Luis Espinoza" (mensaje del enlace del médico). */
+// Nombres de especialidades o especialistas (no síntomas ni palabras sueltas).
+const ESPECIALIDAD_EXPLICITA = /(odont|dentist|pediatr|ortoped|traumatolog|nefrolog|ginecolog|gineco|obstetr|dermatolog|cardiolog|oftalmolog|optometr|otorrin|psicolog|sicolog|psiquiatr|siquiatr|nutricion|internist|endocrin|gastroenter|neurolog|urolog|neumolog|especialista|medic[oa] general|medicina general)/;
+
 export function medicoEnTexto(texto: string): string | null {
   const m = texto.match(/cita con (?:el |la )?(?:dra?|doctora?)\.?\s+([\p{L}][\p{L}\d .'-]{1,60}?)[\s.!¡?]*$/iu);
   return m ? m[1].trim() : null;
@@ -317,24 +320,15 @@ class Sesion {
         botones: [{ id: `avisar:${indice}`, titulo: "Sí, avíseme" }, { id: "reg:otro", titulo: "Buscar otra" }],
       }];
     }
-    if (lista.length === 1) {
-      const m = lista[0];
-      this.medico = m;
-      this.ir("cabecera", { especialidad: e.nombre });
-      return [{
-        tipo: "botones",
-        texto: `En *Aidú Med* tenemos ${m.titulo === "Dra." ? "a la" : m.titulo === "Dr." ? "al" : "a"} *${nombreMedico(m)}* (${e.nombre})${m.consultorio ? `, en ${m.consultorio}` : ""}. ¿Agendamos una cita?`,
-        botones: [{ id: `esp:si:${m.id}`, titulo: "Sí, agendar" }, { id: "reg:otro", titulo: "Buscar otra" }],
-      }];
-    }
+    // Siempre la lista de médicos de la especialidad (aunque sea uno), para que el paciente elija.
     this.ir("elegir_medico", {});
     return [{
-      tipo: "lista", texto: `Estos son los ${e.plural} de *Aidú Med*. Elija con quién desea su cita:`, boton: "Ver médicos",
+      tipo: "lista", texto: lista.length === 1 ? `Este es el médico de ${e.nombre} disponible en *Aidú Med*. Elíjalo para agendar su cita:` : `Estos son los ${e.plural} disponibles en *Aidú Med*. Elija con quién desea su cita:`, boton: "Ver médicos",
       secciones: [{
-        titulo: corto(e.nombre, 24), filas: lista.slice(0, 10).map((m) => ({
+        titulo: corto(e.nombre, 24), filas: lista.slice(0, 9).map((m) => ({
           id: `med:${m.id}`, titulo: corto(nombreMedico(m), 24), descripcion: corto([m.consultorio, m.direccion].filter(Boolean).join(" · "), 72),
         })),
-      }],
+      }, { titulo: "Otras opciones", filas: [{ id: "reg:otro", titulo: "Buscar otra especialidad" }] }],
     }];
   }
 
@@ -373,8 +367,13 @@ class Sesion {
     if (k === "med") {
       const m = await this.d.almacen.medicoPorId(v);
       if (!m || !disponible(m, this.d)) return this.inicio("Ese médico ya no está disponible. ¿Eres paciente o médico?");
+      const desdeEspecialidad = this.conv.paso === "elegir_medico";
       this.medico = m;
-      return this.saludo();
+      if (!desdeEspecialidad) return this.saludo();
+      // Eligió de la lista de una especialidad: ya pidió una cita, así que va directo a los servicios.
+      const salidas = await this.iniciarAgenda();
+      if (salidas[0] && "texto" in salidas[0]) salidas[0] = { ...salidas[0], texto: `Perfecto, agendemos con ${conArticuloNegrita(m)} 📅\n\n${salidas[0].texto}` };
+      return salidas;
     }
     // Botones de las plantillas (recordatorio, cancelación del consultorio): traen la cita o el médico.
     if (k === "rec") return this.respuestaRecordatorio(v, w);
@@ -471,6 +470,14 @@ class Sesion {
     if (paso === "buscar_especialidad" || paso === "sin_especialidad") return this.buscarEspecialidad(texto);
     if (paso === "elegir_medico") return especialidadEnTexto(texto) ? this.buscarEspecialidad(texto) : this.buscarMedico(texto);
     if (paso === "prospecto") return this.guardarProspecto(texto);
+    // Pide otra especialidad por su nombre («cita con un odontólogo», «busco pediatra»): si el médico actual
+    // no es de esa especialidad, se busca entre los de esa especialidad. Solo con el nombre de la especialidad
+    // (no con palabras sueltas como «hijo» o «vista», que pueden ser parte de una cita normal).
+    const espPedida = especialidadEnTexto(texto);
+    if (espPedida && paso !== "nombre" && paso !== "quien" && ESPECIALIDAD_EXPLICITA.test(sinAcentos(texto.toLowerCase())) &&
+        (!this.medico || !esDeEspecialidad(this.medico, espPedida))) {
+      return this.buscarEspecialidad(texto);
+    }
     if (paso === "nombre" && this.medico) {
       const n = limpiarNombre(texto);
       if (n.length < 3) return [{ tipo: "texto", texto: "¿Me escribe el nombre completo, por favor? (nombre y apellido)" }];
