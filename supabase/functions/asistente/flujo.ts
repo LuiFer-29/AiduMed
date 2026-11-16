@@ -100,6 +100,12 @@ const limpiarNombre = (t: string) =>
 // Nombres de especialidades o especialistas (no síntomas ni palabras sueltas).
 const ESPECIALIDAD_EXPLICITA = /(odont|dentist|pediatr|ortoped|traumatolog|nefrolog|ginecolog|gineco|obstetr|dermatolog|cardiolog|oftalmolog|optometr|otorrin|psicolog|sicolog|psiquiatr|siquiatr|nutricion|internist|endocrin|gastroenter|neurolog|urolog|neumolog|especialista|medic[oa] general|medicina general)/;
 
+/** La especialidad que el paciente pide por su nombre («ortopeda», «dentista»), o null. */
+function pideEspecialidad(texto: string) {
+  const e = especialidadEnTexto(texto);
+  return e && ESPECIALIDAD_EXPLICITA.test(sinAcentos(texto.toLowerCase())) ? e : null;
+}
+
 export function medicoEnTexto(texto: string): string | null {
   const m = texto.match(/cita con (?:el |la )?(?:dra?|doctora?)\.?\s+([\p{L}][\p{L}\d .'-]{1,60}?)[\s.!¡?]*$/iu);
   return m ? m[1].trim() : null;
@@ -180,7 +186,9 @@ export async function atender(e: Entrada, d: Dependencias): Promise<Salida[]> {
   } else if (e.id) {
     salidas = await s.porBoton(e.id);
   } else if (esRegreso(conv, anterior, d.ahora)) {
-    salidas = await s.regreso();
+    // Si al volver ya dice qué especialidad busca («necesito un ortopeda»), se saluda y se muestran esos médicos.
+    const t = quitarInvisibles(e.texto || "").trim();
+    salidas = t && pideEspecialidad(t) ? await s.regresoConEspecialidad(t) : await s.regreso();
   } else {
     salidas = await s.porTexto(quitarInvisibles(e.texto || "").trim());
   }
@@ -237,6 +245,23 @@ class Sesion {
   menu(texto = "¿En qué más le puedo ayudar?"): Salida[] {
     this.ir("menu", {});
     return [{ tipo: "botones", texto, botones: BOTONES_MENU }];
+  }
+
+  async regresoConEspecialidad(texto: string): Promise<Salida[]> {
+    const pac = await this.d.almacen.paciente(this.e.telefono);
+    const nombre = (pac?.nombre || (this.e.nombrePerfil ? limpiarNombre(this.e.nombrePerfil) : "")).split(" ")[0];
+    const salidas = await this.buscarEspecialidad(texto);
+    const saludo = `¡Hola de nuevo${nombre ? `, ${nombre}` : ""}! 👋`;
+    const s0 = salidas[0];
+    if (s0 && s0.tipo === "lista" && this.conv.paso === "elegir_medico") {
+      // La lista de especialistas: «Le muestro a continuación los ortopedas que tenemos en Aidú Med».
+      const e = pideEspecialidad(texto)!;
+      const uno = s0.secciones[0]?.filas.length === 1;
+      salidas[0] = { ...s0, texto: `${saludo}\n\nLe muestro a continuación ${uno ? `al especialista en ${e.nombre}` : `los ${e.plural}`} que tenemos en *Aidú Med*:` };
+    } else if (s0 && "texto" in s0) {
+      salidas[0] = { ...s0, texto: `${saludo}\n\n${s0.texto}` };
+    }
+    return salidas;
   }
 
   // ----- Regreso: ¿con el mismo médico, con otro o gestionar citas? -----
@@ -473,8 +498,8 @@ class Sesion {
     // Pide otra especialidad por su nombre («cita con un odontólogo», «busco pediatra»): si el médico actual
     // no es de esa especialidad, se busca entre los de esa especialidad. Solo con el nombre de la especialidad
     // (no con palabras sueltas como «hijo» o «vista», que pueden ser parte de una cita normal).
-    const espPedida = especialidadEnTexto(texto);
-    if (espPedida && paso !== "nombre" && paso !== "quien" && ESPECIALIDAD_EXPLICITA.test(sinAcentos(texto.toLowerCase())) &&
+    const espPedida = pideEspecialidad(texto);
+    if (espPedida && paso !== "nombre" && paso !== "quien" &&
         (!this.medico || !esDeEspecialidad(this.medico, espPedida))) {
       return this.buscarEspecialidad(texto);
     }

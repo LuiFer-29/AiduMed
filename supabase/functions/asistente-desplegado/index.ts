@@ -416,7 +416,7 @@ var ESPECIALIDADES = [
   { nombre: "Medicina general", plural: "m\xE9dicos generales", raices: ["medicina general", "medico general", "doctor general", "general", "chequeo", "consulta general", "medico familiar", "medicina familiar"] },
   { nombre: "Odontolog\xEDa", plural: "dentistas", raices: ["odonto", "dentist", "dental", "muela", "diente", "ortodon", "brackets", "frenos"] },
   { nombre: "Pediatr\xEDa", plural: "pediatras", raices: ["pediatr", "ni\xF1o", "nino", "ni\xF1a", "nina", "bebe", "beb\xE9", "infantil", "hijo", "hija"] },
-  { nombre: "Ortopedia", plural: "ortopedistas", raices: ["ortoped", "traumatolog", "hueso", "fractura", "rodilla", "columna"] },
+  { nombre: "Ortopedia", plural: "ortopedas", raices: ["ortoped", "traumatolog", "hueso", "fractura", "rodilla", "columna"] },
   { nombre: "Nefrolog\xEDa", plural: "nefr\xF3logos", raices: ["nefrolog", "ri\xF1on", "rinon", "renal"] },
   { nombre: "Ginecolog\xEDa", plural: "ginec\xF3logos", raices: ["ginecolog", "gineco", "obstetr", "embaraz", "prenatal"] },
   { nombre: "Dermatolog\xEDa", plural: "dermat\xF3logos", raices: ["dermatolog", "piel", "acne", "acn\xE9", "manchas"] },
@@ -473,6 +473,10 @@ var lempiras = (p) => {
 };
 var limpiarNombre = (t) => t.replace(/[^\p{L}\s'.-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 60).split(" ").map((p) => p ? p[0].toUpperCase() + p.slice(1).toLowerCase() : p).join(" ");
 var ESPECIALIDAD_EXPLICITA = /(odont|dentist|pediatr|ortoped|traumatolog|nefrolog|ginecolog|gineco|obstetr|dermatolog|cardiolog|oftalmolog|optometr|otorrin|psicolog|sicolog|psiquiatr|siquiatr|nutricion|internist|endocrin|gastroenter|neurolog|urolog|neumolog|especialista|medic[oa] general|medicina general)/;
+function pideEspecialidad(texto2) {
+  const e = especialidadEnTexto(texto2);
+  return e && ESPECIALIDAD_EXPLICITA.test(sinAcentos2(texto2.toLowerCase())) ? e : null;
+}
 function medicoEnTexto(texto2) {
   const m = texto2.match(/cita con (?:el |la )?(?:dra?|doctora?)\.?\s+([\p{L}][\p{L}\d .'-]{1,60}?)[\s.!¡?]*$/iu);
   return m ? m[1].trim() : null;
@@ -540,7 +544,8 @@ async function atender(e, d) {
   } else if (e.id) {
     salidas = await s.porBoton(e.id);
   } else if (esRegreso(conv, anterior, d.ahora)) {
-    salidas = await s.regreso();
+    const t = quitarInvisibles(e.texto || "").trim();
+    salidas = t && pideEspecialidad(t) ? await s.regresoConEspecialidad(t) : await s.regreso();
   } else {
     salidas = await s.porTexto(quitarInvisibles(e.texto || "").trim());
   }
@@ -600,6 +605,25 @@ var Sesion = class {
   menu(texto2 = "\xBFEn qu\xE9 m\xE1s le puedo ayudar?") {
     this.ir("menu", {});
     return [{ tipo: "botones", texto: texto2, botones: BOTONES_MENU }];
+  }
+  async regresoConEspecialidad(texto2) {
+    const pac = await this.d.almacen.paciente(this.e.telefono);
+    const nombre = (pac?.nombre || (this.e.nombrePerfil ? limpiarNombre(this.e.nombrePerfil) : "")).split(" ")[0];
+    const salidas = await this.buscarEspecialidad(texto2);
+    const saludo = `\xA1Hola de nuevo${nombre ? `, ${nombre}` : ""}! \u{1F44B}`;
+    const s0 = salidas[0];
+    if (s0 && s0.tipo === "lista" && this.conv.paso === "elegir_medico") {
+      const e = pideEspecialidad(texto2);
+      const uno = s0.secciones[0]?.filas.length === 1;
+      salidas[0] = { ...s0, texto: `${saludo}
+
+Le muestro a continuaci\xF3n ${uno ? `al especialista en ${e.nombre}` : `los ${e.plural}`} que tenemos en *Aid\xFA Med*:` };
+    } else if (s0 && "texto" in s0) {
+      salidas[0] = { ...s0, texto: `${saludo}
+
+${s0.texto}` };
+    }
+    return salidas;
   }
   // ----- Regreso: ¿con el mismo médico, con otro o gestionar citas? -----
   async regreso() {
@@ -840,8 +864,8 @@ Mientras tanto, si necesita otra especialidad, escr\xEDbala cuando guste.` }];
     if (paso === "buscar_especialidad" || paso === "sin_especialidad") return this.buscarEspecialidad(texto2);
     if (paso === "elegir_medico") return especialidadEnTexto(texto2) ? this.buscarEspecialidad(texto2) : this.buscarMedico(texto2);
     if (paso === "prospecto") return this.guardarProspecto(texto2);
-    const espPedida = especialidadEnTexto(texto2);
-    if (espPedida && paso !== "nombre" && paso !== "quien" && ESPECIALIDAD_EXPLICITA.test(sinAcentos2(texto2.toLowerCase())) && (!this.medico || !esDeEspecialidad(this.medico, espPedida))) {
+    const espPedida = pideEspecialidad(texto2);
+    if (espPedida && paso !== "nombre" && paso !== "quien" && (!this.medico || !esDeEspecialidad(this.medico, espPedida))) {
       return this.buscarEspecialidad(texto2);
     }
     if (paso === "nombre" && this.medico) {

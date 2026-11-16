@@ -7,7 +7,7 @@ export const ESPECIALIDADES: Especialidad[] = [
   { nombre: "Medicina general", plural: "médicos generales", raices: ["medicina general", "medico general", "doctor general", "general", "chequeo", "consulta general", "medico familiar", "medicina familiar"] },
   { nombre: "Odontología", plural: "dentistas", raices: ["odonto", "dentist", "dental", "muela", "diente", "ortodon", "brackets", "frenos"] },
   { nombre: "Pediatría", plural: "pediatras", raices: ["pediatr", "niño", "nino", "niña", "nina", "bebe", "bebé", "infantil", "hijo", "hija"] },
-  { nombre: "Ortopedia", plural: "ortopedistas", raices: ["ortoped", "traumatolog", "hueso", "fractura", "rodilla", "columna"] },
+  { nombre: "Ortopedia", plural: "ortopedas", raices: ["ortoped", "traumatolog", "hueso", "fractura", "rodilla", "columna"] },
   { nombre: "Nefrología", plural: "nefrólogos", raices: ["nefrolog", "riñon", "rinon", "renal"] },
   { nombre: "Ginecología", plural: "ginecólogos", raices: ["ginecolog", "gineco", "obstetr", "embaraz", "prenatal"] },
   { nombre: "Dermatología", plural: "dermatólogos", raices: ["dermatolog", "piel", "acne", "acné", "manchas"] },
